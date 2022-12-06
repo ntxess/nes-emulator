@@ -3,295 +3,94 @@
 // http://www.6502.org/tutorials/6502opcodes.html
 // https://www.nesdev.org/wiki/Nesdev_Wiki
 // https://www.nesdev.org/NESDoc.pdf
+// Following the RUST NES Guide by github:bugzmanov
+// https://github.com/bugzmanov/nes_ebook
 
-// Temporary attributes
-#![allow(non_snake_case)] 
 #![allow(dead_code)] 
 
-pub struct INSTRUCTION {
-    opcode: fn() -> u8,
-    addrmode: fn() -> u8,
-    cycle: u8,
+use bitflags::bitflags;
+
+bitflags! {
+    struct StatusFlags: u8 {
+        const CARRY     = 0b00000001;
+        const ZERO      = 0b00000010;
+        const INTERRUPT = 0b00000100;
+        const DECIMAL   = 0b00001000;
+        const BREAK     = 0b00010000;
+        const UNUSED    = 0b00100000;
+        const OVERFLOW  = 0b01000000;
+        const NEGATIVE  = 0b10000000;
+    }
 }
 
 pub struct CPU {
-    pub reg_pc:     u16,
-    pub reg_stkptr: u8,
-    pub reg_acc:    u8,
-    pub reg_x:      u8,
-    pub reg_y:      u8,
-    pub reg_status: u8,
-    translation_tbl: Vec<INSTRUCTION>,
+    pub reg_pc:        u16,
+    pub reg_stack_ptr: u8,
+    pub reg_acc:       u8,
+    pub reg_x:         u8,
+    pub reg_y:         u8,
+    pub reg_status:    u8,
 }
 
 impl CPU {
     pub fn new() -> Self {
         CPU {
-            reg_pc:     0x0000,
-            reg_stkptr: 0x00,
-            reg_acc:    0x00,
-            reg_x:      0x00,
-            reg_y:      0x00,
-            reg_status: 0x00,
+            reg_pc:        0x0000,
+            reg_stack_ptr: 0x00,
+            reg_acc:       0x00,
+            reg_x:         0x00,
+            reg_y:         0x00,
+            reg_status:    0x00,
+        }
+    }
 
-            translation_tbl: vec![
-                INSTRUCTION{opcode: CPU::BRK, addrmode: CPU::IMM, cycle: 7},
-                INSTRUCTION{opcode: CPU::ORA, addrmode: CPU::IZX, cycle: 6},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 8},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 3},
-                INSTRUCTION{opcode: CPU::ORA, addrmode: CPU::ZP0, cycle: 3},
-                INSTRUCTION{opcode: CPU::ASL, addrmode: CPU::ZP0, cycle: 5},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 5},
-                INSTRUCTION{opcode: CPU::PHP, addrmode: CPU::IMP, cycle: 3},
-                INSTRUCTION{opcode: CPU::ORA, addrmode: CPU::IMM, cycle: 2},
-                INSTRUCTION{opcode: CPU::ASL, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 4},
-                INSTRUCTION{opcode: CPU::ORA, addrmode: CPU::ABS, cycle: 4},
-                INSTRUCTION{opcode: CPU::ASL, addrmode: CPU::ABS, cycle: 6},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 6},
-                INSTRUCTION{opcode: CPU::BPL, addrmode: CPU::REL, cycle: 2},
-                INSTRUCTION{opcode: CPU::ORA, addrmode: CPU::IZY, cycle: 5},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 8},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 4},
-                INSTRUCTION{opcode: CPU::ORA, addrmode: CPU::ZPX, cycle: 4},
-                INSTRUCTION{opcode: CPU::ASL, addrmode: CPU::ZPX, cycle: 6},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 6},
-                INSTRUCTION{opcode: CPU::CLC, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::ORA, addrmode: CPU::ABY, cycle: 4},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 7},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 4},
-                INSTRUCTION{opcode: CPU::ORA, addrmode: CPU::ABX, cycle: 4},
-                INSTRUCTION{opcode: CPU::ASL, addrmode: CPU::ABX, cycle: 7},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 7},
-                INSTRUCTION{opcode: CPU::JSR, addrmode: CPU::ABS, cycle: 6},
-                INSTRUCTION{opcode: CPU::AND, addrmode: CPU::IZX, cycle: 6},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 8},
-                INSTRUCTION{opcode: CPU::BIT, addrmode: CPU::ZP0, cycle: 3},
-                INSTRUCTION{opcode: CPU::AND, addrmode: CPU::ZP0, cycle: 3},
-                INSTRUCTION{opcode: CPU::ROL, addrmode: CPU::ZP0, cycle: 5},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 5},
-                INSTRUCTION{opcode: CPU::PLP, addrmode: CPU::IMP, cycle: 4},
-                INSTRUCTION{opcode: CPU::AND, addrmode: CPU::IMM, cycle: 2},
-                INSTRUCTION{opcode: CPU::ROL, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::BIT, addrmode: CPU::ABS, cycle: 4},
-                INSTRUCTION{opcode: CPU::AND, addrmode: CPU::ABS, cycle: 4},
-                INSTRUCTION{opcode: CPU::ROL, addrmode: CPU::ABS, cycle: 6},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 6},
-                INSTRUCTION{opcode: CPU::BMI, addrmode: CPU::REL, cycle: 2},
-                INSTRUCTION{opcode: CPU::AND, addrmode: CPU::IZY, cycle: 5},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 8},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 4},
-                INSTRUCTION{opcode: CPU::AND, addrmode: CPU::ZPX, cycle: 4},
-                INSTRUCTION{opcode: CPU::ROL, addrmode: CPU::ZPX, cycle: 6},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 6},
-                INSTRUCTION{opcode: CPU::SEC, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::AND, addrmode: CPU::ABY, cycle: 4},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 7},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 4},
-                INSTRUCTION{opcode: CPU::AND, addrmode: CPU::ABX, cycle: 4},
-                INSTRUCTION{opcode: CPU::ROL, addrmode: CPU::ABX, cycle: 7},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 7},
-                INSTRUCTION{opcode: CPU::RTI, addrmode: CPU::IMP, cycle: 6},
-                INSTRUCTION{opcode: CPU::EOR, addrmode: CPU::IZX, cycle: 6},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 8},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 3},
-                INSTRUCTION{opcode: CPU::EOR, addrmode: CPU::ZP0, cycle: 3},
-                INSTRUCTION{opcode: CPU::LSR, addrmode: CPU::ZP0, cycle: 5},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 5},
-                INSTRUCTION{opcode: CPU::PHA, addrmode: CPU::IMP, cycle: 3},
-                INSTRUCTION{opcode: CPU::EOR, addrmode: CPU::IMM, cycle: 2},
-                INSTRUCTION{opcode: CPU::LSR, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::JMP, addrmode: CPU::ABS, cycle: 3},
-                INSTRUCTION{opcode: CPU::EOR, addrmode: CPU::ABS, cycle: 4},
-                INSTRUCTION{opcode: CPU::LSR, addrmode: CPU::ABS, cycle: 6},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 6},
-                INSTRUCTION{opcode: CPU::BVC, addrmode: CPU::REL, cycle: 2},
-                INSTRUCTION{opcode: CPU::EOR, addrmode: CPU::IZY, cycle: 5},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 8},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 4},
-                INSTRUCTION{opcode: CPU::EOR, addrmode: CPU::ZPX, cycle: 4},
-                INSTRUCTION{opcode: CPU::LSR, addrmode: CPU::ZPX, cycle: 6},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 6},
-                INSTRUCTION{opcode: CPU::CLI, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::EOR, addrmode: CPU::ABY, cycle: 4},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 7},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 4},
-                INSTRUCTION{opcode: CPU::EOR, addrmode: CPU::ABX, cycle: 4},
-                INSTRUCTION{opcode: CPU::LSR, addrmode: CPU::ABX, cycle: 7},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 7},
-                INSTRUCTION{opcode: CPU::RTS, addrmode: CPU::IMP, cycle: 6},
-                INSTRUCTION{opcode: CPU::ADC, addrmode: CPU::IZX, cycle: 6},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 8},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 3},
-                INSTRUCTION{opcode: CPU::ADC, addrmode: CPU::ZP0, cycle: 3},
-                INSTRUCTION{opcode: CPU::ROR, addrmode: CPU::ZP0, cycle: 5},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 5},
-                INSTRUCTION{opcode: CPU::PLA, addrmode: CPU::IMP, cycle: 4},
-                INSTRUCTION{opcode: CPU::ADC, addrmode: CPU::IMM, cycle: 2},
-                INSTRUCTION{opcode: CPU::ROR, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::JMP, addrmode: CPU::IND, cycle: 5},
-                INSTRUCTION{opcode: CPU::ADC, addrmode: CPU::ABS, cycle: 4},
-                INSTRUCTION{opcode: CPU::ROR, addrmode: CPU::ABS, cycle: 6},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 6},
-                INSTRUCTION{opcode: CPU::BVS, addrmode: CPU::REL, cycle: 2},
-                INSTRUCTION{opcode: CPU::ADC, addrmode: CPU::IZY, cycle: 5},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 8},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 4},
-                INSTRUCTION{opcode: CPU::ADC, addrmode: CPU::ZPX, cycle: 4},
-                INSTRUCTION{opcode: CPU::ROR, addrmode: CPU::ZPX, cycle: 6},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 6},
-                INSTRUCTION{opcode: CPU::SEI, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::ADC, addrmode: CPU::ABY, cycle: 4},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 7},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 4},
-                INSTRUCTION{opcode: CPU::ADC, addrmode: CPU::ABX, cycle: 4},
-                INSTRUCTION{opcode: CPU::ROR, addrmode: CPU::ABX, cycle: 7},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 7},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::STA, addrmode: CPU::IZX, cycle: 6},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 6},
-                INSTRUCTION{opcode: CPU::STY, addrmode: CPU::ZP0, cycle: 3},
-                INSTRUCTION{opcode: CPU::STA, addrmode: CPU::ZP0, cycle: 3},
-                INSTRUCTION{opcode: CPU::STX, addrmode: CPU::ZP0, cycle: 3},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 3},
-                INSTRUCTION{opcode: CPU::DEY, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::TXA, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::STY, addrmode: CPU::ABS, cycle: 4},
-                INSTRUCTION{opcode: CPU::STA, addrmode: CPU::ABS, cycle: 4},
-                INSTRUCTION{opcode: CPU::STX, addrmode: CPU::ABS, cycle: 4},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 4},
-                INSTRUCTION{opcode: CPU::BCC, addrmode: CPU::REL, cycle: 2},
-                INSTRUCTION{opcode: CPU::STA, addrmode: CPU::IZY, cycle: 6},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 6},
-                INSTRUCTION{opcode: CPU::STY, addrmode: CPU::ZPX, cycle: 4},
-                INSTRUCTION{opcode: CPU::STA, addrmode: CPU::ZPX, cycle: 4},
-                INSTRUCTION{opcode: CPU::STX, addrmode: CPU::ZPY, cycle: 4},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 4},
-                INSTRUCTION{opcode: CPU::TYA, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::STA, addrmode: CPU::ABY, cycle: 5},
-                INSTRUCTION{opcode: CPU::TXS, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 5},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 5},
-                INSTRUCTION{opcode: CPU::STA, addrmode: CPU::ABX, cycle: 5},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 5},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 5},
-                INSTRUCTION{opcode: CPU::LDY, addrmode: CPU::IMM, cycle: 2},
-                INSTRUCTION{opcode: CPU::LDA, addrmode: CPU::IZX, cycle: 6},
-                INSTRUCTION{opcode: CPU::LDX, addrmode: CPU::IMM, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 6},
-                INSTRUCTION{opcode: CPU::LDY, addrmode: CPU::ZP0, cycle: 3},
-                INSTRUCTION{opcode: CPU::LDA, addrmode: CPU::ZP0, cycle: 3},
-                INSTRUCTION{opcode: CPU::LDX, addrmode: CPU::ZP0, cycle: 3},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 3},
-                INSTRUCTION{opcode: CPU::TAY, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::LDA, addrmode: CPU::IMM, cycle: 2},
-                INSTRUCTION{opcode: CPU::TAX, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::LDY, addrmode: CPU::ABS, cycle: 4},
-                INSTRUCTION{opcode: CPU::LDA, addrmode: CPU::ABS, cycle: 4},
-                INSTRUCTION{opcode: CPU::LDX, addrmode: CPU::ABS, cycle: 4},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 4},
-                INSTRUCTION{opcode: CPU::BCS, addrmode: CPU::REL, cycle: 2},
-                INSTRUCTION{opcode: CPU::LDA, addrmode: CPU::IZY, cycle: 5},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 5},
-                INSTRUCTION{opcode: CPU::LDY, addrmode: CPU::ZPX, cycle: 4},
-                INSTRUCTION{opcode: CPU::LDA, addrmode: CPU::ZPX, cycle: 4},
-                INSTRUCTION{opcode: CPU::LDX, addrmode: CPU::ZPY, cycle: 4},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 4},
-                INSTRUCTION{opcode: CPU::CLV, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::LDA, addrmode: CPU::ABY, cycle: 4},
-                INSTRUCTION{opcode: CPU::TSX, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 4},
-                INSTRUCTION{opcode: CPU::LDY, addrmode: CPU::ABX, cycle: 4},
-                INSTRUCTION{opcode: CPU::LDA, addrmode: CPU::ABX, cycle: 4},
-                INSTRUCTION{opcode: CPU::LDX, addrmode: CPU::ABY, cycle: 4},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 4},
-                INSTRUCTION{opcode: CPU::CPY, addrmode: CPU::IMM, cycle: 2},
-                INSTRUCTION{opcode: CPU::CMP, addrmode: CPU::IZX, cycle: 6},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 8},
-                INSTRUCTION{opcode: CPU::CPY, addrmode: CPU::ZP0, cycle: 3},
-                INSTRUCTION{opcode: CPU::CMP, addrmode: CPU::ZP0, cycle: 3},
-                INSTRUCTION{opcode: CPU::DEC, addrmode: CPU::ZP0, cycle: 5},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 5},
-                INSTRUCTION{opcode: CPU::INY, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::CMP, addrmode: CPU::IMM, cycle: 2},
-                INSTRUCTION{opcode: CPU::DEX, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::CPY, addrmode: CPU::ABS, cycle: 4},
-                INSTRUCTION{opcode: CPU::CMP, addrmode: CPU::ABS, cycle: 4},
-                INSTRUCTION{opcode: CPU::DEC, addrmode: CPU::ABS, cycle: 6},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 6},
-                INSTRUCTION{opcode: CPU::BNE, addrmode: CPU::REL, cycle: 2},
-                INSTRUCTION{opcode: CPU::CMP, addrmode: CPU::IZY, cycle: 5},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 8},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 4},
-                INSTRUCTION{opcode: CPU::CMP, addrmode: CPU::ZPX, cycle: 4},
-                INSTRUCTION{opcode: CPU::DEC, addrmode: CPU::ZPX, cycle: 6},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 6},
-                INSTRUCTION{opcode: CPU::CLD, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::CMP, addrmode: CPU::ABY, cycle: 4},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 7},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 4},
-                INSTRUCTION{opcode: CPU::CMP, addrmode: CPU::ABX, cycle: 4},
-                INSTRUCTION{opcode: CPU::DEC, addrmode: CPU::ABX, cycle: 7},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 7},
-                INSTRUCTION{opcode: CPU::CPX, addrmode: CPU::IMM, cycle: 2},
-                INSTRUCTION{opcode: CPU::SBC, addrmode: CPU::IZX, cycle: 6},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 8},
-                INSTRUCTION{opcode: CPU::CPX, addrmode: CPU::ZP0, cycle: 3},
-                INSTRUCTION{opcode: CPU::SBC, addrmode: CPU::ZP0, cycle: 3},
-                INSTRUCTION{opcode: CPU::INC, addrmode: CPU::ZP0, cycle: 5},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 5},
-                INSTRUCTION{opcode: CPU::INX, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::SBC, addrmode: CPU::IMM, cycle: 2},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::SBC, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::CPX, addrmode: CPU::ABS, cycle: 4},
-                INSTRUCTION{opcode: CPU::SBC, addrmode: CPU::ABS, cycle: 4},
-                INSTRUCTION{opcode: CPU::INC, addrmode: CPU::ABS, cycle: 6},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 6},
-                INSTRUCTION{opcode: CPU::BEQ, addrmode: CPU::REL, cycle: 2},
-                INSTRUCTION{opcode: CPU::SBC, addrmode: CPU::IZY, cycle: 5},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 8},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 4},
-                INSTRUCTION{opcode: CPU::SBC, addrmode: CPU::ZPX, cycle: 4},
-                INSTRUCTION{opcode: CPU::INC, addrmode: CPU::ZPX, cycle: 6},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 6},
-                INSTRUCTION{opcode: CPU::SED, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::SBC, addrmode: CPU::ABY, cycle: 4},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 2},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 7},
-                INSTRUCTION{opcode: CPU::NOP, addrmode: CPU::IMP, cycle: 4},
-                INSTRUCTION{opcode: CPU::SBC, addrmode: CPU::ABX, cycle: 4},
-                INSTRUCTION{opcode: CPU::INC, addrmode: CPU::ABX, cycle: 7},
-                INSTRUCTION{opcode: CPU::XXX, addrmode: CPU::IMP, cycle: 7}
-            ]
+    // Auxiliary Function
+
+    pub fn interpret(&mut self, program: Vec<u8>) {
+        self.reg_pc = 0;
+
+        loop {
+            let opscode = program[self.reg_pc as usize];
+            self.reg_pc += 1;
+    
+            match opscode {
+                0xA9 => {
+                    let param = program[self.reg_pc as usize];
+                    self.reg_pc +=1;
+                    self.reg_acc = param;
+    
+                    if self.reg_acc == 0 {
+                        self.reg_status = self.reg_status | 0b0000_0010;
+                    } else {
+                        self.reg_status = self.reg_status & 0b1111_1101;
+                    }
+    
+                    if self.reg_acc & 0b1000_0000 != 0 {
+                        self.reg_status = self.reg_status | 0b1000_0000;
+                    } else {
+                        self.reg_status = self.reg_status & 0b0111_1111;
+                    }
+                }
+                0xAA =>  {
+                    self.reg_x = self.reg_acc;
+                
+                    if self.reg_x == 0 {
+                        self.reg_status = self.reg_status | 0b0000_0010;
+                    } else {
+                        self.reg_status = self.reg_status & 0b1111_1101;
+                    }
+    
+                    if self.reg_x & 0b1000_0000 != 0 {
+                        self.reg_status = self.reg_status | 0b1000_0000;
+                    } else {
+                        self.reg_status = self.reg_status & 0b0111_1111;
+                    }
+                }
+                0x00 => {
+                    return;
+                }
+                _ => todo!()
+            }
         }
     }
 
@@ -302,15 +101,15 @@ impl CPU {
     // manipulated is implied directly by the function of the instruction itself and no 
     // further operand needs to be specified. Operations like 'Clear Carry Flag' (CLC) and 
     //'Return from Subroutine' (RTS) are implicit.
-    fn IMP() -> u8 {
-        return 0;
+    fn imp(&mut self) -> u8 {
+        todo!();
     }
 
     // Addressing Mode: Immediate
     // Immediate addressing allows the programmer to directly specify an 8 bit constant 
     // within the instruction. It is indicated by a '#' symbol followed by an numeric expression.
-    fn IMM() -> u8 {
-        return 0;
+    fn imm(&mut self) -> u8 {
+        todo!();
     }
 
     // Addressing Mode: Zero Page
@@ -320,16 +119,16 @@ impl CPU {
     // the least significant byte of the address is held in the instruction making it shorter 
     // by one byte (important for space saving) and one less memory fetch during execution 
     // (important for speed).
-	fn ZP0() -> u8 {
-        return 0;
+	fn zp0(&mut self) -> u8 {
+        todo!();
     }		
 
     // Addressing Mode: Zero Page, X
     // The address to be accessed by an instruction using indexed zero page addressing is 
     // calculated by taking the 8 bit zero page address from the instruction and adding the 
     // current value of the X register to it.
-    fn ZPX() -> u8 {
-        return 0;
+    fn zpx(&mut self) -> u8 {
+        todo!();
     }
 
     // Addressing Mode: Zero Page, Y
@@ -337,8 +136,8 @@ impl CPU {
     // calculated by taking the 8 bit zero page address from the instruction and adding the 
     // current value of the Y register to it. This mode can only be used with the LDX and STX 
     // instructions.
-	fn ZPY() -> u8 {
-        return 0;
+	fn zpy(&mut self) -> u8 {
+        todo!();
     }
 
     // Addressing Mode: Relative
@@ -347,15 +146,15 @@ impl CPU {
     // counter if the condition is true. As the program counter itself is incremented during 
     // instruction execution by two the effective address range for the target instruction 
     // must be with -126 to +129 bytes of the branch.
-    fn REL() -> u8 {
-        return 0;
+    fn rel(&mut self) -> u8 {
+        todo!();
     }
 
     // Addressing Mode: Absolute
     // Instructions using absolute addressing contain a full 16 bit address to identify the 
     // target location. 
-	fn ABS() -> u8 {
-        return 0;
+	fn abs(&mut self) -> u8 {
+        todo!();
     }
 
     // Addressing Mode: Absolute, Y
@@ -363,23 +162,23 @@ impl CPU {
     // is computed by taking the 16 bit address from the instruction and added the contents of 
     // the X register. For example if X contains $92 then an STA $2000,X instruction will store 
     // the accumulator at $2092 (e.g. $2000 + $92).
-    fn ABX() -> u8 {
-        return 0;
+    fn abx(&mut self) -> u8 {
+        todo!();
     }
 
     // Addressing Mode: Absolute, X
     // The Y register indexed absolute addressing mode is the same as the previous mode only with 
     // the contents of the Y register added to the 16 bit address from the instruction.
-	fn ABY() -> u8 {
-        return 0;
+	fn aby(&mut self) -> u8 {
+        todo!();
     }	
 
     // Addressing Mode: Indirect
     // JMP is the only 6502 instruction to support indirection. The instruction contains a 16 bit 
     // address which identifies the location of the least significant byte of another 16 bit memory 
     // address which is the real target of the instruction.
-    fn IND() -> u8 {
-        return 0;
+    fn ind(&mut self) -> u8 {
+        todo!();
     }
 
     // Addressing Mode: Index Indirect 
@@ -387,8 +186,8 @@ impl CPU {
     // zero page. The address of the table is taken from the instruction and the X register added to 
     // it (with zero page wrap around) to give the location of the least significant byte of the 
     // target address.
-    fn IZX() -> u8 {
-        return 0;
+    fn izx(&mut self) -> u8 {
+        todo!();
     }
 
     // Addressing Mode: Indirect Indexed
@@ -396,293 +195,320 @@ impl CPU {
     // instruction contains the zero page location of the least significant byte of 16 bit address. 
     // The Y register is dynamically added to this value to generated the actual target address for 
     // operation.
-    fn IZY() -> u8 {
-        return 0;
+    fn izy(&mut self) -> u8 {
+        todo!();
     }
 
     // Instructions
     
     // Instruction: Add with Carry
-    fn ADC() -> u8 {
-        return 0;
+    fn adc(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Logic AND
-    fn AND() -> u8 {
-        return 0;
+    fn and(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Arithmetic Shift Left
-    fn ASL() -> u8 {
-        return 0;
+    fn asl(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Branch if Carry Clear
-    fn BCC() -> u8 {
-        return 0;
+    fn bcc(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction:  Branch if Carrt Set
-	fn BCS() -> u8 {
-        return 0;
+	fn bcs(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Branch if Equal
-    fn BEQ() -> u8 {
-        return 0;
+    fn beq(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Bit Test
-    fn BIT() -> u8 {
-        return 0;
+    fn bit(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Branch if Minus
-    fn BMI() -> u8 {
-        return 0;
+    fn bmi(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Branch if Not Equal
-	fn BNE() -> u8 {
-        return 0;
+	fn bne(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Branch if Positive
-    fn BPL() -> u8 {
-        return 0;
+    fn bpl(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Force Interrupt
-    fn BRK() -> u8 {
-        return 0;
+    fn brk(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Branch if Overflow Clear
-    fn BVC() -> u8 {
-        return 0;
+    fn bvc(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Branch Carry Flag
-	fn BVS() -> u8 {
-        return 0;
+	fn bvs(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Clear Carry Flag
-    fn CLC() -> u8 {
-        return 0;
+    fn clc(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Clear Decimal Mode
-    fn CLD() -> u8 {
-        return 0;
+    fn cld(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Clear Interrupt Disable
-    fn CLI() -> u8 {
-        return 0;
+    fn cli(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction:  Clear Overflow Flag
-	fn CLV() -> u8 {
-        return 0;
+	fn clv(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Compare
-    fn CMP() -> u8 {
-        return 0;
+    fn cmp(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Compare X Register
-    fn CPX() -> u8 {
-        return 0;
+    fn cpx(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Compare Y Register
-    fn CPY() -> u8 {
-        return 0;
+    fn cpy(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Decrement Memory
-	fn DEC() -> u8 {
-        return 0;
+	fn dec(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Decrement X Register
-    fn DEX() -> u8 {
-        return 0;
+    fn dex(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Decrement Y Register
-    fn DEY() -> u8 {
-        return 0;
+    fn dey(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Exclusive OR
-    fn EOR() -> u8 {
-        return 0;
+    fn eor(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Increment Memory
-	fn INC() -> u8 {
-        return 0;
+	fn inc(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Increment X Register
-    fn INX() -> u8 {
-        return 0;
+    fn inx(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Increment Y Register
-    fn INY() -> u8 {
-        return 0;
+    fn iny(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Jump
-    fn JMP() -> u8 {
-        return 0;
+    fn jmp(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Jump to Subroutine
-	fn JSR() -> u8 {
-        return 0;
+	fn jsr(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Load Accumulator
-    fn LDA() -> u8 {
-        return 0;
+    fn lda(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Load X Register
-    fn LDX() -> u8 {
-        return 0;
+    fn ldx(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Load Y Register
-    fn LDY() -> u8 {
-        return 0;
+    fn ldy(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Logical Shift Right
-	fn LSR() -> u8 {
-        return 0;
+	fn lsr(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: No Operation
-    fn NOP() -> u8 {
-        return 0;
+    fn nop(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Logical Inclusive OR
-    fn ORA() -> u8 {
-        return 0;
+    fn ora(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Push Accumulator
-    fn PHA() -> u8 {
-        return 0;
+    fn pha(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Push Processor Status
-	fn PHP() -> u8 {
-        return 0;
+	fn php(&mut self) -> u8 {
+        todo!();
     }
     
     // Instruction: Pull Accumulator
-    fn PLA() -> u8 {
-        return 0;
+    fn pla(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Pull Processor Status
-    fn PLP() -> u8 {
-        return 0;
+    fn plp(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Rotate Left
-    fn ROL() -> u8 {
-        return 0;
+    fn rol(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Rotate Right
-	fn ROR() -> u8 {
-        return 0;
+	fn ror(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Return from Interrupt
-    fn RTI() -> u8 {
-        return 0;
+    fn rti(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Return from Subroutine
-    fn RTS() -> u8 {
-        return 0;
+    fn rts(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Subtract with Carry
-    fn SBC() -> u8 {
-        return 0;
+    fn sbc(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Set Carry Flag
-	fn SEC() -> u8 {
-        return 0;
+	fn sec(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Set Decimal Flag
-    fn SED() -> u8 {
-        return 0;
+    fn sed(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Set Interrupt Disable
-    fn SEI() -> u8 {
-        return 0;
+    fn sei(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Store Accumulator
-    fn STA() -> u8 {
-        return 0;
+    fn sta(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Store X Register
-	fn STX() -> u8 {
-        return 0;
+	fn stx(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Store Y Register
-    fn STY() -> u8 {
-        return 0;
+    fn sty(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Transfer Accumulator to X
-    fn TAX() -> u8 {
-        return 0;
+    fn tax(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Transfer Accumulator to Y
-    fn TAY() -> u8 {
-        return 0;
+    fn tay(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Transfer Stack Pointer to X
-	fn TSX() -> u8 {
-        return 0;
+	fn tsx(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Transfer X to Accumulator
-    fn TXA() -> u8 {
-        return 0;
+    fn txa(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Transfer X to Stack Pointer
-    fn TXS() -> u8 {
-        return 0;
+    fn txs(&mut self) -> u8 {
+        todo!();
     }
 
     // Instruction: Transfer Y to Accumulator
-    fn TYA() -> u8 {
-        return 0;
+    fn tya(&mut self) -> u8 {
+        todo!();
     }
 
-    fn XXX() -> u8 {
-        return 0;
+    fn xxx(&mut self) -> u8 {
+        todo!();
     }
+}
+
+impl Default for CPU {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+ 
+    #[test]
+    fn test_0xa9_lda_immidiate_load_data() {
+        let mut cpu = CPU::new();
+        cpu.interpret(vec![0xa9, 0x05, 0x00]);
+        assert_eq!(cpu.reg_acc, 0x05);
+        assert!(cpu.reg_status & 0b0000_0010 == 0b00);
+        assert!(cpu.reg_status & 0b1000_0000 == 0);
+    }
+ 
+     #[test]
+     fn test_0xa9_lda_zero_flag() {
+         let mut cpu = CPU::new();
+         cpu.interpret(vec![0xa9, 0x00, 0x00]);
+         assert!(cpu.reg_status & 0b0000_0010 == 0b10);
+     }
 }
