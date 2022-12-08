@@ -29,25 +29,13 @@ pub struct Instruction {
     cycle:    u8,
 }
 
-pub struct CPU {
-    pub reg_pc:        u16,
-    pub reg_stack_ptr: u8,
-    pub reg_acc:       u8,
-    pub reg_x:         u8,
-    pub reg_y:         u8,
-    pub reg_status:    u8,
-    pub opcode_matrix: Vec<Instruction>,
+pub struct OpcodeMatrix {
+    pub opcode_matrix: Vec<Instruction>
 }
 
-impl CPU {
+impl OpcodeMatrix {
     pub fn new() -> Self {
-        CPU {
-            reg_pc:        0x0000,
-            reg_stack_ptr: 0x00,
-            reg_acc:       0x00,
-            reg_x:         0x00,
-            reg_y:         0x00,
-            reg_status:    0x00,
+        OpcodeMatrix {
             opcode_matrix: vec![
                 Instruction{opcode: Box::new(CPU::brk), addrmode: Box::new(CPU::imm), cycle: 7},
                 Instruction{opcode: Box::new(CPU::ora), addrmode: Box::new(CPU::izx), cycle: 6},
@@ -305,58 +293,52 @@ impl CPU {
                 Instruction{opcode: Box::new(CPU::sbc), addrmode: Box::new(CPU::abx), cycle: 4},
                 Instruction{opcode: Box::new(CPU::inc), addrmode: Box::new(CPU::abx), cycle: 7},
                 Instruction{opcode: Box::new(CPU::xxx), addrmode: Box::new(CPU::imp), cycle: 7},
-                ],
+            ],
+        }
+    }
+
+    pub fn get_opcode(&mut self, code: usize) -> &Box<dyn Fn(&mut CPU) -> u8> {
+        return &self.opcode_matrix[code].opcode;
+    }
+
+    pub fn get_addrmode(&mut self, code: usize) -> &Box<dyn Fn(&mut CPU) -> u8> {
+        return &self.opcode_matrix[code].addrmode;
+    }
+
+    pub fn get_cycle(&mut self, code: usize) -> u8 {
+        return self.opcode_matrix[code].cycle;
+    }
+}
+
+pub struct CPU {
+    pub reg_pc:        u16,
+    pub reg_stack_ptr: u8,
+    pub reg_acc:       u8,
+    pub reg_x:         u8,
+    pub reg_y:         u8,
+    pub reg_status:    u8,
+}
+
+impl CPU {
+    pub fn new() -> Self {
+        CPU {
+            reg_pc:        0x0000,
+            reg_stack_ptr: 0x00,
+            reg_acc:       0x00,
+            reg_x:         0x00,
+            reg_y:         0x00,
+            reg_status:    0x00,
         }
     }
 
     // Auxiliary Function
-
-    pub fn interpret(&mut self, program: Vec<u8>) {
+    pub fn interpret(&mut self, matrix: &mut OpcodeMatrix, program: Vec<u8>) {
         self.reg_pc = 0;
 
-        loop {
-            let opscode = program[self.reg_pc as usize];
-            self.reg_pc += 1;
-    
-            match opscode {
-                0xA9 => {
-                    let param = program[self.reg_pc as usize];
-                    self.reg_pc +=1;
-                    self.reg_acc = param;
-    
-                    if self.reg_acc == 0 {
-                        self.reg_status = self.reg_status | 0b0000_0010;
-                    } else {
-                        self.reg_status = self.reg_status & 0b1111_1101;
-                    }
-    
-                    if self.reg_acc & 0b1000_0000 != 0 {
-                        self.reg_status = self.reg_status | 0b1000_0000;
-                    } else {
-                        self.reg_status = self.reg_status & 0b0111_1111;
-                    }
-                }
-                0xAA =>  {
-                    self.reg_x = self.reg_acc;
-                
-                    if self.reg_x == 0 {
-                        self.reg_status = self.reg_status | 0b0000_0010;
-                    } else {
-                        self.reg_status = self.reg_status & 0b1111_1101;
-                    }
-    
-                    if self.reg_x & 0b1000_0000 != 0 {
-                        self.reg_status = self.reg_status | 0b1000_0000;
-                    } else {
-                        self.reg_status = self.reg_status & 0b0111_1111;
-                    }
-                }
-                0x00 => {
-                    return;
-                }
-                _ => todo!()
-            }
-        }
+        
+        matrix.get_opcode(program[self.reg_pc as usize] as usize)(self);
+        matrix.get_addrmode(program[self.reg_pc as usize] as usize)(self);
+        matrix.get_cycle(program[self.reg_pc as usize] as usize);
     }
 
     // Addressing Modes
@@ -367,14 +349,16 @@ impl CPU {
     // further operand needs to be specified. Operations like 'Clear Carry Flag' (CLC) and 
     //'Return from Subroutine' (RTS) are implicit.
     fn imp(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Addressing Mode: Immediate
     // Immediate addressing allows the programmer to directly specify an 8 bit constant 
     // within the instruction. It is indicated by a '#' symbol followed by an numeric expression.
     fn imm(&mut self) -> u8 {
-        todo!();
+        println!("We in it!");
+        return 0;
+        // return 0;
     }
 
     // Addressing Mode: Zero Page
@@ -385,7 +369,7 @@ impl CPU {
     // by one byte (important for space saving) and one less memory fetch during execution 
     // (important for speed).
 	fn zp0(&mut self) -> u8 {
-        todo!();
+        return 0;
     }		
 
     // Addressing Mode: Zero Page, X
@@ -393,7 +377,7 @@ impl CPU {
     // calculated by taking the 8 bit zero page address from the instruction and adding the 
     // current value of the X register to it.
     fn zpx(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Addressing Mode: Zero Page, Y
@@ -402,7 +386,7 @@ impl CPU {
     // current value of the Y register to it. This mode can only be used with the LDX and STX 
     // instructions.
 	fn zpy(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Addressing Mode: Relative
@@ -412,14 +396,14 @@ impl CPU {
     // instruction execution by two the effective address range for the target instruction 
     // must be with -126 to +129 bytes of the branch.
     fn rel(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Addressing Mode: Absolute
     // Instructions using absolute addressing contain a full 16 bit address to identify the 
     // target location. 
 	fn abs(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Addressing Mode: Absolute, Y
@@ -428,14 +412,14 @@ impl CPU {
     // the X register. For example if X contains $92 then an STA $2000,X instruction will store 
     // the accumulator at $2092 (e.g. $2000 + $92).
     fn abx(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Addressing Mode: Absolute, X
     // The Y register indexed absolute addressing mode is the same as the previous mode only with 
     // the contents of the Y register added to the 16 bit address from the instruction.
 	fn aby(&mut self) -> u8 {
-        todo!();
+        return 0;
     }	
 
     // Addressing Mode: Indirect
@@ -443,7 +427,7 @@ impl CPU {
     // address which identifies the location of the least significant byte of another 16 bit memory 
     // address which is the real target of the instruction.
     fn ind(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Addressing Mode: Index Indirect 
@@ -452,7 +436,7 @@ impl CPU {
     // it (with zero page wrap around) to give the location of the least significant byte of the 
     // target address.
     fn izx(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Addressing Mode: Indirect Indexed
@@ -461,293 +445,295 @@ impl CPU {
     // The Y register is dynamically added to this value to generated the actual target address for 
     // operation.
     fn izy(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instructions
     
     // Instruction: Add with Carry
     fn adc(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Logic AND
     fn and(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Arithmetic Shift Left
     fn asl(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Branch if Carry Clear
     fn bcc(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction:  Branch if Carrt Set
 	fn bcs(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Branch if Equal
     fn beq(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Bit Test
     fn bit(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Branch if Minus
     fn bmi(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Branch if Not Equal
 	fn bne(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Branch if Positive
     fn bpl(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Force Interrupt
     fn brk(&mut self) -> u8 {
-        todo!();
+        println!("We made it!");
+        return 0;
+        // return 0;
     }
 
     // Instruction: Branch if Overflow Clear
     fn bvc(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Branch Carry Flag
 	fn bvs(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Clear Carry Flag
     fn clc(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Clear Decimal Mode
     fn cld(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Clear Interrupt Disable
     fn cli(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction:  Clear Overflow Flag
 	fn clv(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Compare
     fn cmp(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Compare X Register
     fn cpx(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Compare Y Register
     fn cpy(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Decrement Memory
 	fn dec(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Decrement X Register
     fn dex(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Decrement Y Register
     fn dey(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Exclusive OR
     fn eor(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Increment Memory
 	fn inc(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Increment X Register
     fn inx(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Increment Y Register
     fn iny(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Jump
     fn jmp(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Jump to Subroutine
 	fn jsr(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Load Accumulator
     fn lda(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Load X Register
     fn ldx(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Load Y Register
     fn ldy(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Logical Shift Right
 	fn lsr(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: No Operation
     fn nop(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Logical Inclusive OR
     fn ora(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Push Accumulator
     fn pha(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Push Processor Status
 	fn php(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
     
     // Instruction: Pull Accumulator
     fn pla(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Pull Processor Status
     fn plp(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Rotate Left
     fn rol(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Rotate Right
 	fn ror(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Return from Interrupt
     fn rti(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Return from Subroutine
     fn rts(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Subtract with Carry
     fn sbc(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Set Carry Flag
 	fn sec(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Set Decimal Flag
     fn sed(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Set Interrupt Disable
     fn sei(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Store Accumulator
     fn sta(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Store X Register
 	fn stx(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Store Y Register
     fn sty(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Transfer Accumulator to X
     fn tax(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Transfer Accumulator to Y
     fn tay(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Transfer Stack Pointer to X
 	fn tsx(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Transfer X to Accumulator
     fn txa(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Transfer X to Stack Pointer
     fn txs(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     // Instruction: Transfer Y to Accumulator
     fn tya(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 
     fn xxx(&mut self) -> u8 {
-        todo!();
+        return 0;
     }
 }
 
@@ -761,19 +747,27 @@ impl Default for CPU {
 mod tests {
     use super::*;
  
-    #[test]
-    fn test_0xa9_lda_immidiate_load_data() {
-        let mut cpu = CPU::new();
-        cpu.interpret(vec![0xa9, 0x05, 0x00]);
-        assert_eq!(cpu.reg_acc, 0x05);
-        assert!(cpu.reg_status & 0b0000_0010 == 0b00);
-        assert!(cpu.reg_status & 0b1000_0000 == 0);
-    }
+    // #[test]
+    // fn test_0xa9_lda_immidiate_load_data() {
+    //     let mut cpu = CPU::new();
+    //     cpu.interpret(vec![0xa9, 0x05, 0x00]);
+    //     assert_eq!(cpu.reg_acc, 0x05);
+    //     assert!(cpu.reg_status & 0b0000_0010 == 0b00);
+    //     assert!(cpu.reg_status & 0b1000_0000 == 0);
+    // }
  
+    //  #[test]
+    //  fn test_0xa9_lda_zero_flag() {
+    //      let mut cpu = CPU::new();
+    //      cpu.interpret(vec![0xa9, 0x00, 0x00]);
+    //      assert!(cpu.reg_status & 0b0000_0010 == 0b10);
+    //  }
+
      #[test]
-     fn test_0xa9_lda_zero_flag() {
-         let mut cpu = CPU::new();
-         cpu.interpret(vec![0xa9, 0x00, 0x00]);
-         assert!(cpu.reg_status & 0b0000_0010 == 0b10);
-     }
+     fn test_brk() {
+        let mut cpu = CPU::new();
+        let mut matrix = OpcodeMatrix::new();
+
+        cpu.interpret(&mut matrix, vec![0x00]);
+    }
 }
