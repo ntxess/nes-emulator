@@ -30,7 +30,8 @@ pub struct CPU {
     pub reg_y:         u8,
     pub reg_status:    u8,
     pub fetched:       u8,
-    memory:            [u8; 0xFFFF],
+    memory:           [u8; 0xFFFF],
+    pub temp_mem:      Vec<u8>, 
 }
 
 impl CPU {
@@ -44,20 +45,24 @@ impl CPU {
             reg_status:    0x00,
             fetched:       0x00,
             memory:        [0; 0xFFFF],
+            temp_mem:      vec![],
         }
     }
 
     // Auxiliary Function
     pub fn interpret(&mut self, program: &[u8]) {
-        let mut matrix = InstructionSet::new();
+        let matrix = InstructionSet::new();
         self.reg_pc = 0;
+        self.temp_mem = program.to_vec();
 
         while (self.reg_pc as usize) < program.len() {
-            matrix.get_addrmode(program[self.reg_pc as usize] as usize)(self, program);
-            matrix.get_opcode(program[self.reg_pc as usize] as usize)(self);
-            matrix.get_cycle(program[self.reg_pc as usize] as usize);
-            self.reg_pc += 1;
+            if (program[self.reg_pc as usize]) == 0x00 { 
+                break; 
+            }
 
+            matrix.get_opcode(program[self.reg_pc as usize] as usize)(&matrix, self);
+            matrix.get_cycle(program[self.reg_pc as usize] as usize);
+            //self.reg_pc += 1;
         }
     }
 
