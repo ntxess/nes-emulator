@@ -476,6 +476,19 @@ impl InstructionSet {
 
     // Instruction: Increment X Register
     fn inx(&self, _cpu: &mut CPU) -> u8 {
+        _cpu.reg_x = _cpu.reg_x.wrapping_add(1);
+
+        if _cpu.reg_acc == 0 {
+            _cpu.reg_status = _cpu.reg_status | 0b0000_0010;
+        } else {
+            _cpu.reg_status = _cpu.reg_status & 0b1111_1101;
+        }
+
+        if _cpu.reg_acc & 0b1000_0000 != 0 {
+            _cpu.reg_status = _cpu.reg_status | 0b1000_0000;
+        } else {
+            _cpu.reg_status = _cpu.reg_status & 0b0111_1111;
+        }
         return 0;
     }
 
@@ -497,7 +510,6 @@ impl InstructionSet {
     // Instruction: Load Accumulator
     fn lda(&self, _cpu: &mut CPU) -> u8 {
         self.get_addrmode(_cpu.temp_mem[_cpu.reg_pc as usize] as usize)(_cpu);
-        _cpu.reg_pc += 1;
         _cpu.reg_acc = _cpu.fetched;
 
         if _cpu.reg_acc == 0 {

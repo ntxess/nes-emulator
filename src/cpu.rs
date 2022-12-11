@@ -56,13 +56,9 @@ impl CPU {
         self.temp_mem = program.to_vec();
 
         while (self.reg_pc as usize) < program.len() {
-            if (program[self.reg_pc as usize]) == 0x00 { 
-                break; 
-            }
-
             matrix.get_opcode(program[self.reg_pc as usize] as usize)(&matrix, self);
             matrix.get_cycle(program[self.reg_pc as usize] as usize);
-            //self.reg_pc += 1;
+            self.reg_pc += 1;
         }
     }
 
@@ -135,13 +131,5 @@ mod tests {
         cpu.interpret(&[0xe8, 0xe8, 0x00]);
 
         assert_eq!(cpu.reg_x, 1)
-    }
-
-    #[test]
-    fn test_individual() {
-        let mut cpu = CPU::new();
-
-        cpu.interpret(&[0xa9, 0xc0, 0x00]);
-        assert_eq!(cpu.reg_acc, 0xc1)
     }
 }
