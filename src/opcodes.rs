@@ -2,7 +2,7 @@ use crate::cpu::CPU;
 
 pub struct Instruction {
     opcode:   Box<dyn Fn(&InstructionSet, &mut CPU) -> u8>,
-    addrmode: Box<dyn Fn(&mut CPU) -> u8>,
+    addrmode: Box<dyn Fn(&mut CPU)>,
     cycle:    u8,
 }
 
@@ -279,7 +279,7 @@ impl InstructionSet {
         return &self.matrix[code].opcode;
     }
 
-    pub fn get_addrmode(&self, code: usize) -> &Box<dyn Fn(&mut CPU) -> u8> {
+    pub fn get_addrmode(&self, code: usize) -> &Box<dyn Fn(&mut CPU)> {
         return &self.matrix[code].addrmode;
     }
 
@@ -288,67 +288,106 @@ impl InstructionSet {
     }
     
     // Addressing Mode: Implicit
-    fn imp(_cpu: &mut CPU) -> u8 {
+    fn imp(_cpu: &mut CPU) {
         _cpu.fetched = _cpu.reg_acc;
-        return 0;
     }
 
     // Addressing Mode: Immediate
-    fn imm(_cpu: &mut CPU) -> u8 {
+    fn imm(_cpu: &mut CPU) {
         _cpu.reg_pc += 1;
 
         _cpu.fetched = _cpu.memory[(_cpu.reg_pc) as usize];
-        return 0;
     }
 
     // Addressing Mode: Zero Page
-	fn zp0(_cpu: &mut CPU) -> u8 {
-        return 0;
+	fn zp0(_cpu: &mut CPU) {
+        _cpu.reg_pc += 1;
+
+        let address = _cpu.memory[(_cpu.reg_pc) as usize] as u16;
+        _cpu.fetched = _cpu.memory[(address) as usize];
     }		
 
     // Addressing Mode: Zero Page, X
-    fn zpx(_cpu: &mut CPU) -> u8 {
-        return 0;
+    fn zpx(_cpu: &mut CPU) {
+        _cpu.reg_pc += 1;
+
+        let pos = _cpu.memory[(_cpu.reg_pc) as usize];
+        let address = pos.wrapping_add(_cpu.reg_x) as u16;
+        _cpu.fetched = _cpu.memory[(address) as usize];
     }
 
     // Addressing Mode: Zero Page, Y
-	fn zpy(_cpu: &mut CPU) -> u8 {
-        return 0;
+	fn zpy(_cpu: &mut CPU) {
+        _cpu.reg_pc += 1;
+
+        let pos = _cpu.memory[(_cpu.reg_pc) as usize];
+        let address = pos.wrapping_add(_cpu.reg_y) as u16;
+
+        _cpu.fetched = _cpu.memory[(address) as usize];
     }
 
     // Addressing Mode: Relative
-    fn rel(_cpu: &mut CPU) -> u8 {
-        return 0;
+    fn rel(_cpu: &mut CPU) {
+        _cpu.reg_pc += 1;
     }
 
     // Addressing Mode: Absolute
-	fn abs(_cpu: &mut CPU) -> u8 {
-        return 0;
-    }
-
-    // Addressing Mode: Absolute, Y
-    fn abx(_cpu: &mut CPU) -> u8 {
-        return 0;
+	fn abs(_cpu: &mut CPU) {
+        _cpu.reg_pc += 1;
     }
 
     // Addressing Mode: Absolute, X
-	fn aby(_cpu: &mut CPU) -> u8 {
-        return 0;
+    fn abx(_cpu: &mut CPU) {
+        _cpu.reg_pc += 1;
+
+        let base = _cpu.mem_read_u16(_cpu.reg_pc);
+        let address = base.wrapping_add(_cpu.reg_x as u16);
+
+        _cpu.fetched = _cpu.memory[(address) as usize];
+
+    }
+
+    // Addressing Mode: Absolute, Y
+	fn aby(_cpu: &mut CPU) {
+        _cpu.reg_pc += 1;
+
+        let base = _cpu.mem_read_u16(_cpu.reg_pc);
+        let address = base.wrapping_add(_cpu.reg_y as u16);
+
+        _cpu.fetched = _cpu.memory[(address) as usize];
     }	
 
     // Addressing Mode: Indirect
-    fn ind(_cpu: &mut CPU) -> u8 {
-        return 0;
+    fn ind(_cpu: &mut CPU) {
+        _cpu.reg_pc += 1;
+
     }
 
-    // Addressing Mode: Index Indirect 
-    fn izx(_cpu: &mut CPU) -> u8 {
-        return 0;
+    // Addressing Mode: Indirect Indexed X
+    fn izx(_cpu: &mut CPU) {
+        _cpu.reg_pc += 1;
+
+        let base = _cpu.mem_read(_cpu.reg_pc);
+        let ptr: u8 = (base as u8).wrapping_add(_cpu.reg_x);
+        let lo = _cpu.mem_read(ptr as u16);
+        let hi = _cpu.mem_read(ptr.wrapping_add(1) as u16);
+        let address = (hi as u16) << 8 | (lo as u16);
+
+        _cpu.fetched = _cpu.memory[(address) as usize];
     }
 
-    // Addressing Mode: Indirect Indexed
-    fn izy(_cpu: &mut CPU) -> u8 {
-        return 0;
+    // Addressing Mode: Indirect Indexed Y
+    fn izy(_cpu: &mut CPU) {
+        _cpu.reg_pc += 1;
+
+        let base = _cpu.mem_read(_cpu.reg_pc);
+
+        let ptr: u8 = (base as u8).wrapping_add(_cpu.reg_y);
+        let lo = _cpu.mem_read(ptr as u16);
+        let hi = _cpu.mem_read(ptr.wrapping_add(1) as u16);
+        let address = (hi as u16) << 8 | (lo as u16);
+
+        _cpu.fetched = _cpu.memory[(address) as usize];
     }
 
     // Instruction: Add with Carry

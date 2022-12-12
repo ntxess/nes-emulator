@@ -1,11 +1,3 @@
-// Implementation of NES 6502 CPU
-// https://www.nesdev.org/obelisk-6502-guide/reference.html
-// http://www.6502.org/tutorials/6502opcodes.html
-// https://www.nesdev.org/wiki/Nesdev_Wiki
-// https://www.nesdev.org/NESDoc.pdf
-// Following the RUST NES Guide by github:bugzmanov
-// https://github.com/bugzmanov/nes_ebook
-
 use crate::opcodes::InstructionSet;
 use bitflags::bitflags;
 
@@ -48,7 +40,7 @@ impl CPU {
     }
 
     // Auxiliary Function
-    fn mem_read(&self, addr: u16) -> u8 {
+    pub fn mem_read(&self, addr: u16) -> u8 {
         self.memory[addr as usize]
     }
 
@@ -56,7 +48,7 @@ impl CPU {
         self.memory[addr as usize] = data;
     }
 
-    fn mem_read_u16(&self, pos: u16) -> u16 {
+    pub fn mem_read_u16(&self, pos: u16) -> u16 {
         let lo = self.mem_read(pos) as u16;
         let hi = self.mem_read(pos + 1) as u16;
         (hi << 8) | (lo as u16)
@@ -74,6 +66,7 @@ impl CPU {
         self.reg_x = 0;
         self.reg_status = 0;
 
+        // Reset program counter to the start of program ROM
         self.reg_pc = self.mem_read_u16(0xFFFC);
     }
     
@@ -83,7 +76,7 @@ impl CPU {
     }
 
     pub fn load(&mut self, program: Vec<u8>) {
-        // Memory location [0x8000 .. 0xFFFF] is reserved for Program ROM
+        // Memory location [0x8000 .. 0xFFFF] is reserved for program ROM
         // Copy program ROM into NES memory starting from position 0x8000
         // Write reference of the start of program ROM to NES memory position 0xFFFC
         self.memory[0x8000 .. (0x8000 + program.len())].copy_from_slice(&program[..]);
@@ -158,5 +151,14 @@ mod tests {
         cpu.load_and_run(vec![0xe8, 0xe8, 0x00]);
 
         assert_eq!(cpu.reg_x, 1)
+    }
+
+    #[test]
+    fn test_lda_from_memory() {
+        let mut cpu = CPU::new();
+        cpu.mem_write(0x10, 0x55);
+
+        cpu.load_and_run(vec![0xa5, 0x10, 0x00]);
+        assert_eq!(cpu.reg_acc, 0x55);
     }
 }
