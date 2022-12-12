@@ -85,11 +85,10 @@ impl CPU {
 
     pub fn run(&mut self) {
         let matrix = InstructionSet::new();
-        println!("PC: {0}", self.reg_pc);
 
         while (self.reg_pc as usize) < self.memory.len() {
             matrix.get_opcode(self.memory[self.reg_pc as usize] as usize)(&matrix, self);
-            matrix.get_cycle(self.memory[self.reg_pc as usize] as usize);
+            //matrix.get_cycle(self.memory[self.reg_pc as usize] as usize);
             self.reg_pc += 1;
         }
     }

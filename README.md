@@ -1,7 +1,10 @@
 # nes-emulator
 Learning RUST through a guide on making an NES emulator.
 
-I'm following a guide on how to make an NES emulator. There are some differences from the guide, but I generally tried to follow it as best I could without completely copying it. The differences I've made are not improvements, but more to see if I understand how RUST works.
+I'm following a guide on how to make an NES emulator. 
+There are some structural design differences from the guide, but the project is heavily borrowed and referenced by   
+bugzmanov, the original creator. 
+This project is use only for educational purposes. I do not claim any code borrowed from the original creator.  
 
 Link to guide:  
 https://github.com/bugzmanov/nes_ebook  

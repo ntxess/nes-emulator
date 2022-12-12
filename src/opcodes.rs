@@ -1,7 +1,7 @@
 use crate::cpu::CPU;
 
 pub struct Instruction {
-    opcode:   Box<dyn Fn(&InstructionSet, &mut CPU) -> u8>,
+    opcode:   Box<dyn Fn(&InstructionSet, &mut CPU)>,
     addrmode: Box<dyn Fn(&mut CPU)>,
     cycle:    u8,
 }
@@ -275,7 +275,7 @@ impl InstructionSet {
     }
 
     // Auxillary Functions
-    pub fn get_opcode(&self, code: usize) -> &Box<dyn Fn(&InstructionSet, &mut CPU) -> u8> {
+    pub fn get_opcode(&self, code: usize) -> &Box<dyn Fn(&InstructionSet, &mut CPU)> {
         return &self.matrix[code].opcode;
     }
 
@@ -283,13 +283,13 @@ impl InstructionSet {
         return &self.matrix[code].addrmode;
     }
 
-    pub fn get_cycle(&self, code: usize) -> u8 {
+    pub fn get_cycle(&self, code: usize) -> u8{
         return self.matrix[code].cycle;
     }
-    
+
     // Addressing Mode: Implicit
     fn imp(_cpu: &mut CPU) {
-        _cpu.fetched = _cpu.reg_acc;
+        //_cpu.fetched = _cpu.reg_acc;
     }
 
     // Addressing Mode: Immediate
@@ -304,6 +304,7 @@ impl InstructionSet {
         _cpu.reg_pc += 1;
 
         let address = _cpu.memory[(_cpu.reg_pc) as usize] as u16;
+
         _cpu.fetched = _cpu.memory[(address) as usize];
     }		
 
@@ -313,6 +314,7 @@ impl InstructionSet {
 
         let pos = _cpu.memory[(_cpu.reg_pc) as usize];
         let address = pos.wrapping_add(_cpu.reg_x) as u16;
+
         _cpu.fetched = _cpu.memory[(address) as usize];
     }
 
@@ -328,12 +330,12 @@ impl InstructionSet {
 
     // Addressing Mode: Relative
     fn rel(_cpu: &mut CPU) {
-        _cpu.reg_pc += 1;
+        // _cpu.reg_pc += 1;
     }
 
     // Addressing Mode: Absolute
 	fn abs(_cpu: &mut CPU) {
-        _cpu.reg_pc += 1;
+        // _cpu.reg_pc += 1;
     }
 
     // Addressing Mode: Absolute, X
@@ -359,7 +361,7 @@ impl InstructionSet {
 
     // Addressing Mode: Indirect
     fn ind(_cpu: &mut CPU) {
-        _cpu.reg_pc += 1;
+        // _cpu.reg_pc += 1;
 
     }
 
@@ -391,132 +393,147 @@ impl InstructionSet {
     }
 
     // Instruction: Add with Carry
-    fn adc(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn adc(&self, _cpu: &mut CPU) {
+
     }
 
     // Instruction: Logic AND
-    fn and(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn and(&self, _cpu: &mut CPU) {
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
+
+        let data = _cpu.mem_read(_cpu.fetched as u16);
+        _cpu.reg_acc = _cpu.reg_acc & data;
+
+        if _cpu.reg_acc == 0 {
+            _cpu.reg_status = _cpu.reg_status | 0b0000_0010;
+        } else {
+            _cpu.reg_status = _cpu.reg_status & 0b1111_1101;
+        }
+
+        if _cpu.reg_acc & 0b1000_0000 != 0 {
+            _cpu.reg_status = _cpu.reg_status | 0b1000_0000;
+        } else {
+            _cpu.reg_status = _cpu.reg_status & 0b0111_1111;
+        }
     }
 
     // Instruction: Arithmetic Shift Left
-    fn asl(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn asl(&self, _cpu: &mut CPU) {
+
     }
 
     // Instruction: Branch if Carry Clear
-    fn bcc(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn bcc(&self, _cpu: &mut CPU) {
+
     }
 
     // Instruction:  Branch if Carrt Set
-	fn bcs(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+	fn bcs(&self, _cpu: &mut CPU) {
+
     }
 
     // Instruction: Branch if Equal
-    fn beq(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn beq(&self, _cpu: &mut CPU) {
+
     }
 
     // Instruction: Bit Test
-    fn bit(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn bit(&self, _cpu: &mut CPU) {
+
     }
 
     // Instruction: Branch if Minus
-    fn bmi(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn bmi(&self, _cpu: &mut CPU) {
+
     }
 
     // Instruction: Branch if Not Equal
-	fn bne(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+	fn bne(&self, _cpu: &mut CPU) {
+
     }
 
     // Instruction: Branch if Positive
-    fn bpl(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn bpl(&self, _cpu: &mut CPU) {
+
     }
 
     // Instruction: Force Interrupt
-    fn brk(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn brk(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Branch if Overflow Clear
-    fn bvc(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn bvc(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Branch Carry Flag
-	fn bvs(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+	fn bvs(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Clear Carry Flag
-    fn clc(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn clc(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Clear Decimal Mode
-    fn cld(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn cld(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Clear Interrupt Disable
-    fn cli(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn cli(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction:  Clear Overflow Flag
-	fn clv(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+	fn clv(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Compare
-    fn cmp(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn cmp(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Compare X Register
-    fn cpx(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn cpx(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Compare Y Register
-    fn cpy(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn cpy(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Decrement Memory
-	fn dec(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+	fn dec(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Decrement X Register
-    fn dex(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn dex(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Decrement Y Register
-    fn dey(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn dey(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Exclusive OR
-    fn eor(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn eor(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Increment Memory
-	fn inc(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+	fn inc(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Increment X Register
-    fn inx(&self, _cpu: &mut CPU) -> u8 {
+    fn inx(&self, _cpu: &mut CPU) {
         _cpu.reg_x = _cpu.reg_x.wrapping_add(1);
 
         if _cpu.reg_acc == 0 {
@@ -530,26 +547,25 @@ impl InstructionSet {
         } else {
             _cpu.reg_status = _cpu.reg_status & 0b0111_1111;
         }
-        return 0;
     }
 
     // Instruction: Increment Y Register
-    fn iny(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn iny(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Jump
-    fn jmp(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn jmp(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Jump to Subroutine
-	fn jsr(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+	fn jsr(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Load Accumulator
-    fn lda(&self, _cpu: &mut CPU) -> u8 {
+    fn lda(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
         _cpu.reg_acc = _cpu.fetched;
 
@@ -564,112 +580,110 @@ impl InstructionSet {
         } else {
             _cpu.reg_status = _cpu.reg_status & 0b0111_1111;
         }
-
-        return 0;
     }
 
     // Instruction: Load X Register
-    fn ldx(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn ldx(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Load Y Register
-    fn ldy(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn ldy(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Logical Shift Right
-	fn lsr(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+	fn lsr(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: No Operation
-    fn nop(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn nop(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Logical Inclusive OR
-    fn ora(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn ora(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Push Accumulator
-    fn pha(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn pha(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Push Processor Status
-	fn php(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+	fn php(&self, _cpu: &mut CPU) {
+         
     }
     
     // Instruction: Pull Accumulator
-    fn pla(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn pla(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Pull Processor Status
-    fn plp(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn plp(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Rotate Left
-    fn rol(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn rol(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Rotate Right
-	fn ror(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+	fn ror(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Return from Interrupt
-    fn rti(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn rti(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Return from Subroutine
-    fn rts(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn rts(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Subtract with Carry
-    fn sbc(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn sbc(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Set Carry Flag
-	fn sec(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+	fn sec(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Set Decimal Flag
-    fn sed(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn sed(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Set Interrupt Disable
-    fn sei(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn sei(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Store Accumulator
-    fn sta(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn sta(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Store X Register
-	fn stx(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+	fn stx(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Store Y Register
-    fn sty(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn sty(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Transfer Accumulator to X
-    fn tax(&self, _cpu: &mut CPU) -> u8 {
+    fn tax(&self, _cpu: &mut CPU) {
         _cpu.reg_x = _cpu.reg_acc;
             
         if _cpu.reg_x == 0 {
@@ -683,35 +697,34 @@ impl InstructionSet {
         } else {
             _cpu.reg_status = _cpu.reg_status & 0b0111_1111;
         }
-        return 0;
     }
 
     // Instruction: Transfer Accumulator to Y
-    fn tay(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn tay(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Transfer Stack Pointer to X
-	fn tsx(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+	fn tsx(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Transfer X to Accumulator
-    fn txa(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn txa(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Transfer X to Stack Pointer
-    fn txs(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn txs(&self, _cpu: &mut CPU) {
+         
     }
 
     // Instruction: Transfer Y to Accumulator
-    fn tya(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn tya(&self, _cpu: &mut CPU) {
+         
     }
 
-    fn xxx(&self, _cpu: &mut CPU) -> u8 {
-        return 0;
+    fn xxx(&self, _cpu: &mut CPU) {
+         
     }
 }
