@@ -289,13 +289,15 @@ impl InstructionSet {
     
     // Addressing Mode: Implicit
     fn imp(_cpu: &mut CPU) -> u8 {
+        _cpu.fetched = _cpu.reg_acc;
         return 0;
     }
 
     // Addressing Mode: Immediate
     fn imm(_cpu: &mut CPU) -> u8 {
         _cpu.reg_pc += 1;
-        _cpu.fetched = _cpu.temp_mem[(_cpu.reg_pc) as usize];
+
+        _cpu.fetched = _cpu.memory[(_cpu.reg_pc) as usize];
         return 0;
     }
 
@@ -509,7 +511,7 @@ impl InstructionSet {
 
     // Instruction: Load Accumulator
     fn lda(&self, _cpu: &mut CPU) -> u8 {
-        self.get_addrmode(_cpu.temp_mem[_cpu.reg_pc as usize] as usize)(_cpu);
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
         _cpu.reg_acc = _cpu.fetched;
 
         if _cpu.reg_acc == 0 {

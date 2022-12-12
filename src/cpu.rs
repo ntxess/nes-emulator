@@ -30,8 +30,7 @@ pub struct CPU {
     pub reg_y:         u8,
     pub reg_status:    u8,
     pub fetched:       u8,
-    memory:           [u8; 0xFFFF],
-    pub temp_mem:      Vec<u8>, 
+    pub memory:       [u8; 0xFFFF],
 }
 
 impl CPU {
@@ -44,22 +43,30 @@ impl CPU {
             reg_y:         0x00,
             reg_status:    0x00,
             fetched:       0x00,
-            memory:        [0; 0xFFFF],
-            temp_mem:      vec![],
+            memory:       [0; 0xFFFF],
         }
     }
 
     // Auxiliary Function
-    pub fn interpret(&mut self, program: &[u8]) {
-        let matrix = InstructionSet::new();
-        self.reg_pc = 0;
-        self.temp_mem = program.to_vec();
+    fn mem_read(&self, addr: u16) -> u8 {
+        self.memory[addr as usize]
+    }
 
-        while (self.reg_pc as usize) < program.len() {
-            matrix.get_opcode(program[self.reg_pc as usize] as usize)(&matrix, self);
-            matrix.get_cycle(program[self.reg_pc as usize] as usize);
-            self.reg_pc += 1;
-        }
+    fn mem_write(&mut self, addr: u16, data: u8) {
+        self.memory[addr as usize] = data;
+    }
+
+    fn mem_read_u16(&self, pos: u16) -> u16 {
+        let lo = self.mem_read(pos) as u16;
+        let hi = self.mem_read(pos + 1) as u16;
+        (hi << 8) | (lo as u16)
+    }
+
+    fn mem_write_u16(&mut self, pos: u16, data: u16) {
+        let hi = (data >> 8) as u8;
+        let lo = (data & 0xff) as u8;
+        self.mem_write(pos, lo);
+        self.mem_write(pos + 1, hi);
     }
 
     pub fn reset(&mut self) {
@@ -67,9 +74,31 @@ impl CPU {
         self.reg_x = 0;
         self.reg_status = 0;
 
-        self.memory[0] = 0; 
+        self.reg_pc = self.mem_read_u16(0xFFFC);
+    }
+    
+    pub fn load_and_run(&mut self, program: Vec<u8>) {
+        self.load(program);
+        self.run();
+    }
 
-        // self.reg_pc = self.mem_read_u16(0xFFFC);
+    pub fn load(&mut self, program: Vec<u8>) {
+        // Memory location [0x8000 .. 0xFFFF] is reserved for Program ROM
+        // Copy program ROM into NES memory starting from position 0x8000
+        // Write reference of the start of program ROM to NES memory position 0xFFFC
+        self.memory[0x8000 .. (0x8000 + program.len())].copy_from_slice(&program[..]);
+        self.mem_write_u16(0xFFFC, 0x8000);
+    }
+
+    pub fn run(&mut self) {
+        let matrix = InstructionSet::new();
+        println!("PC: {0}", self.reg_pc);
+
+        while (self.reg_pc as usize) < self.memory.len() {
+            matrix.get_opcode(self.memory[self.reg_pc as usize] as usize)(&matrix, self);
+            matrix.get_cycle(self.memory[self.reg_pc as usize] as usize);
+            self.reg_pc += 1;
+        }
     }
 }
 
@@ -81,7 +110,7 @@ mod tests {
     fn test_0xa9_lda_immidiate_load_data() {
         let mut cpu = CPU::new();
 
-        cpu.interpret(&[0xa9, 0x05, 0x00]);
+        cpu.load_and_run(vec![0xa9, 0x05, 0x00]);
         assert_eq!(cpu.reg_acc, 5);
         assert!(cpu.reg_status & 0b0000_0010 == 0);
         assert!(cpu.reg_status & 0b1000_0000 == 0);
@@ -91,7 +120,7 @@ mod tests {
     fn test_0xa9_lda_zero_flag() {
         let mut cpu = CPU::new();
 
-        cpu.interpret(&[0xa9, 0x00, 0x00]);
+        cpu.load_and_run(vec![0xa9, 0x00, 0x00]);
         assert!(cpu.reg_status & 0b0000_0010 == 0b10);
     }
     
@@ -99,7 +128,7 @@ mod tests {
     fn test_0xa9_lda_negative_flag() {
         let mut cpu = CPU::new();
 
-        cpu.interpret(&[0xa9, 0xff, 0x00]);
+        cpu.load_and_run(vec![0xa9, 0xff, 0x00]);
         assert!(cpu.reg_status & 0b1000_0000 == 0b1000_0000);
 
     }
@@ -109,8 +138,7 @@ mod tests {
         let mut cpu = CPU::new();
 
         cpu.reg_acc = 10;
-        cpu.interpret(&[0xaa, 0x00]);
-
+        cpu.load_and_run(vec![0xaa, 0x00]);
         assert_eq!(cpu.reg_x, 10)
     }
 
@@ -118,8 +146,7 @@ mod tests {
     fn test_5_ops_working_together() {
         let mut cpu = CPU::new();
 
-        cpu.interpret(&[0xa9, 0xc0, 0xaa, 0xe8, 0x00]);
-
+        cpu.load_and_run(vec![0xa9, 0xc0, 0xaa, 0xe8, 0x00]);
         assert_eq!(cpu.reg_x, 0xc1)
     }
 
@@ -128,7 +155,7 @@ mod tests {
         let mut cpu = CPU::new();
 
         cpu.reg_x = 0xff;
-        cpu.interpret(&[0xe8, 0xe8, 0x00]);
+        cpu.load_and_run(vec![0xe8, 0xe8, 0x00]);
 
         assert_eq!(cpu.reg_x, 1)
     }
