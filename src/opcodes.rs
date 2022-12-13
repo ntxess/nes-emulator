@@ -287,7 +287,7 @@ impl InstructionSet {
         return self.matrix[code].cycle;
     }
 
-    // Addressing Mode: Implicit
+    // TODO Addressing Mode: Implicit
     fn imp(_cpu: &mut CPU) {
         //_cpu.fetched = _cpu.reg_acc;
     }
@@ -296,7 +296,7 @@ impl InstructionSet {
     fn imm(_cpu: &mut CPU) {
         _cpu.reg_pc += 1;
 
-        _cpu.fetched = _cpu.memory[(_cpu.reg_pc) as usize];
+        _cpu.fetched = _cpu.memory[(_cpu.reg_pc) as usize] as u16;
     }
 
     // Addressing Mode: Zero Page
@@ -305,7 +305,7 @@ impl InstructionSet {
 
         let address = _cpu.memory[(_cpu.reg_pc) as usize] as u16;
 
-        _cpu.fetched = _cpu.memory[(address) as usize];
+        _cpu.fetched = _cpu.memory[(address) as usize] as u16;
     }		
 
     // Addressing Mode: Zero Page, X
@@ -315,7 +315,7 @@ impl InstructionSet {
         let pos = _cpu.memory[(_cpu.reg_pc) as usize];
         let address = pos.wrapping_add(_cpu.reg_x) as u16;
 
-        _cpu.fetched = _cpu.memory[(address) as usize];
+        _cpu.fetched = _cpu.memory[(address) as usize] as u16;
     }
 
     // Addressing Mode: Zero Page, Y
@@ -325,15 +325,15 @@ impl InstructionSet {
         let pos = _cpu.memory[(_cpu.reg_pc) as usize];
         let address = pos.wrapping_add(_cpu.reg_y) as u16;
 
-        _cpu.fetched = _cpu.memory[(address) as usize];
+        _cpu.fetched = _cpu.memory[(address) as usize] as u16;
     }
 
-    // Addressing Mode: Relative
+    // TODO Addressing Mode: Relative
     fn rel(_cpu: &mut CPU) {
         // _cpu.reg_pc += 1;
     }
 
-    // Addressing Mode: Absolute
+    // TODO Addressing Mode: Absolute
 	fn abs(_cpu: &mut CPU) {
         // _cpu.reg_pc += 1;
     }
@@ -345,7 +345,7 @@ impl InstructionSet {
         let base = _cpu.mem_read_u16(_cpu.reg_pc);
         let address = base.wrapping_add(_cpu.reg_x as u16);
 
-        _cpu.fetched = _cpu.memory[(address) as usize];
+        _cpu.fetched = _cpu.memory[(address) as usize] as u16;
 
     }
 
@@ -356,10 +356,10 @@ impl InstructionSet {
         let base = _cpu.mem_read_u16(_cpu.reg_pc);
         let address = base.wrapping_add(_cpu.reg_y as u16);
 
-        _cpu.fetched = _cpu.memory[(address) as usize];
+        _cpu.fetched = _cpu.memory[(address) as usize] as u16;
     }	
 
-    // Addressing Mode: Indirect
+    // TODO Addressing Mode: Indirect
     fn ind(_cpu: &mut CPU) {
         // _cpu.reg_pc += 1;
 
@@ -375,7 +375,7 @@ impl InstructionSet {
         let hi = _cpu.mem_read(ptr.wrapping_add(1) as u16);
         let address = (hi as u16) << 8 | (lo as u16);
 
-        _cpu.fetched = _cpu.memory[(address) as usize];
+        _cpu.fetched = _cpu.memory[(address) as usize] as u16;
     }
 
     // Addressing Mode: Indirect Indexed Y
@@ -389,10 +389,10 @@ impl InstructionSet {
         let hi = _cpu.mem_read(ptr.wrapping_add(1) as u16);
         let address = (hi as u16) << 8 | (lo as u16);
 
-        _cpu.fetched = _cpu.memory[(address) as usize];
+        _cpu.fetched = _cpu.memory[(address) as usize] as u16;
     }
 
-    // Instruction: Add with Carry
+    // TODO Instruction: Add with Carry
     fn adc(&self, _cpu: &mut CPU) {
 
     }
@@ -401,14 +401,14 @@ impl InstructionSet {
     fn and(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
 
-        let data = _cpu.mem_read(_cpu.fetched as u16);
+        let data = _cpu.mem_read(_cpu.fetched);
         _cpu.reg_acc = _cpu.reg_acc & data;
 
         _cpu.set_status_flags(_cpu.reg_acc == 0, StatusFlags::ZERO);
         _cpu.set_status_flags((_cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // Instruction: Arithmetic Shift Left
+    // TODO Instruction: Arithmetic Shift Left
     fn asl(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
 
@@ -420,23 +420,29 @@ impl InstructionSet {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
         
         if !_cpu.reg_status.contains(StatusFlags::CARRY) {
-            _cpu.reg_pc = _cpu.reg_pc.wrapping_add(_cpu.fetched as u16);
+            _cpu.reg_pc = _cpu.reg_pc.wrapping_add(_cpu.fetched);
         }
     }
 
-    // Instruction:  Branch if Carrt Set
+    // Instruction: Branch if Carry Set
 	fn bcs(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
         
+        if _cpu.reg_status.contains(StatusFlags::CARRY) {
+            _cpu.reg_pc = _cpu.reg_pc.wrapping_add(_cpu.fetched);
+        }
     }
 
     // Instruction: Branch if Equal
     fn beq(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
 
+        if _cpu.reg_status.contains(StatusFlags::ZERO) {
+            _cpu.reg_pc = _cpu.reg_pc.wrapping_add(_cpu.fetched);
+        }
     }
 
-    // Instruction: Bit Test
+    // TODO Instruction: Bit Test
     fn bit(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
 
@@ -446,21 +452,30 @@ impl InstructionSet {
     fn bmi(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
 
+        if _cpu.reg_status.contains(StatusFlags::NEGATIVE) {
+            _cpu.reg_pc = _cpu.reg_pc.wrapping_add(_cpu.fetched);
+        }
     }
 
     // Instruction: Branch if Not Equal
 	fn bne(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
 
+        if !_cpu.reg_status.contains(StatusFlags::ZERO) {
+            _cpu.reg_pc = _cpu.reg_pc.wrapping_add(_cpu.fetched);
+        }
     }
 
     // Instruction: Branch if Positive
     fn bpl(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
 
+        if !_cpu.reg_status.contains(StatusFlags::NEGATIVE) {
+            _cpu.reg_pc = _cpu.reg_pc.wrapping_add(_cpu.fetched);
+        }
     }
 
-    // Instruction: Force Interrupt
+    // TODO Instruction: Force Interrupt
     fn brk(&self, _cpu: &mut CPU) {
          
     }
@@ -468,76 +483,82 @@ impl InstructionSet {
     // Instruction: Branch if Overflow Clear
     fn bvc(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
-         
+        
+        if !_cpu.reg_status.contains(StatusFlags::OVERFLOW) {
+            _cpu.reg_pc = _cpu.reg_pc.wrapping_add(_cpu.fetched);
+        }
     }
 
     // Instruction: Branch Carry Flag
 	fn bvs(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
-         
+        
+        if _cpu.reg_status.contains(StatusFlags::OVERFLOW) {
+            _cpu.reg_pc = _cpu.reg_pc.wrapping_add(_cpu.fetched);
+        }
     }
 
     // Instruction: Clear Carry Flag
     fn clc(&self, _cpu: &mut CPU) {
-         
+        _cpu.reg_status.remove(StatusFlags::CARRY);
     }
 
     // Instruction: Clear Decimal Mode
     fn cld(&self, _cpu: &mut CPU) {
-         
+        _cpu.reg_status.remove(StatusFlags::DECIMAL);
     }
 
     // Instruction: Clear Interrupt Disable
     fn cli(&self, _cpu: &mut CPU) {
-         
+        _cpu.reg_status.remove(StatusFlags::INTERRUPT);
     }
 
     // Instruction:  Clear Overflow Flag
 	fn clv(&self, _cpu: &mut CPU) {
-         
+        _cpu.reg_status.remove(StatusFlags::OVERFLOW);
     }
 
-    // Instruction: Compare
+    // TODO Instruction: Compare
     fn cmp(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
-    // Instruction: Compare X Register
+    // TODO Instruction: Compare X Register
     fn cpx(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
-    // Instruction: Compare Y Register
+    // TODO Instruction: Compare Y Register
     fn cpy(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
-    // Instruction: Decrement Memory
+    // TODO Instruction: Decrement Memory
 	fn dec(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
-    // Instruction: Decrement X Register
+    // TODO Instruction: Decrement X Register
     fn dex(&self, _cpu: &mut CPU) {
          
     }
 
-    // Instruction: Decrement Y Register
+    // TODO Instruction: Decrement Y Register
     fn dey(&self, _cpu: &mut CPU) {
          
     }
 
-    // Instruction: Exclusive OR
+    // TODO Instruction: Exclusive OR
     fn eor(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
-    // Instruction: Increment Memory
+    // TODO Instruction: Increment Memory
 	fn inc(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
@@ -551,18 +572,18 @@ impl InstructionSet {
         _cpu.set_status_flags((_cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // Instruction: Increment Y Register
+    // TODO Instruction: Increment Y Register
     fn iny(&self, _cpu: &mut CPU) {
          
     }
 
-    // Instruction: Jump
+    // TODO Instruction: Jump
     fn jmp(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
-    // Instruction: Jump to Subroutine
+    // TODO Instruction: Jump to Subroutine
 	fn jsr(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
@@ -571,84 +592,84 @@ impl InstructionSet {
     // Instruction: Load Accumulator
     fn lda(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
-        _cpu.reg_acc = _cpu.fetched;
+        _cpu.reg_acc = _cpu.fetched as u8;
 
         _cpu.set_status_flags(_cpu.reg_acc == 0, StatusFlags::ZERO);
         _cpu.set_status_flags((_cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // Instruction: Load X Register
+    // TODO Instruction: Load X Register
     fn ldx(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
-    // Instruction: Load Y Register
+    // TODO Instruction: Load Y Register
     fn ldy(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
-    // Instruction: Logical Shift Right
+    // TODO Instruction: Logical Shift Right
 	fn lsr(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
-    // Instruction: No Operation
+    // TODO Instruction: No Operation
     fn nop(&self, _cpu: &mut CPU) {
          
     }
 
-    // Instruction: Logical Inclusive OR
+    // TODO Instruction: Logical Inclusive OR
     fn ora(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
-    // Instruction: Push Accumulator
+    // TODO Instruction: Push Accumulator
     fn pha(&self, _cpu: &mut CPU) {
          
     }
 
-    // Instruction: Push Processor Status
+    // TODO Instruction: Push Processor Status
 	fn php(&self, _cpu: &mut CPU) {
          
     }
     
-    // Instruction: Pull Accumulator
+    // TODO Instruction: Pull Accumulator
     fn pla(&self, _cpu: &mut CPU) {
          
     }
 
-    // Instruction: Pull Processor Status
+    // TODO Instruction: Pull Processor Status
     fn plp(&self, _cpu: &mut CPU) {
          
     }
 
-    // Instruction: Rotate Left
+    // TODO Instruction: Rotate Left
     fn rol(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
-    // Instruction: Rotate Right
+    // TODO Instruction: Rotate Right
 	fn ror(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
-    // Instruction: Return from Interrupt
+    // TODO Instruction: Return from Interrupt
     fn rti(&self, _cpu: &mut CPU) {
          
     }
 
-    // Instruction: Return from Subroutine
+    // TODO Instruction: Return from Subroutine
     fn rts(&self, _cpu: &mut CPU) {
          
     }
 
-    // Instruction: Subtract with Carry
+    // TODO Instruction: Subtract with Carry
     fn sbc(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
@@ -656,35 +677,38 @@ impl InstructionSet {
 
     // Instruction: Set Carry Flag
 	fn sec(&self, _cpu: &mut CPU) {
-         
+        _cpu.reg_status.insert(StatusFlags::CARRY);
     }
 
     // Instruction: Set Decimal Flag
     fn sed(&self, _cpu: &mut CPU) {
-         
+        _cpu.reg_status.insert(StatusFlags::DECIMAL);   
     }
 
     // Instruction: Set Interrupt Disable
     fn sei(&self, _cpu: &mut CPU) {
-         
+        _cpu.reg_status.insert(StatusFlags::INTERRUPT);   
     }
 
     // Instruction: Store Accumulator
     fn sta(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
+        _cpu.mem_write(_cpu.fetched, _cpu.reg_acc);
     }
 
     // Instruction: Store X Register
 	fn stx(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
+        _cpu.mem_write(_cpu.fetched, _cpu.reg_x);
     }
 
     // Instruction: Store Y Register
     fn sty(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
-         
+        
+        _cpu.mem_write(_cpu.fetched, _cpu.reg_y);
     }
 
     // Instruction: Transfer Accumulator to X
@@ -697,27 +721,36 @@ impl InstructionSet {
 
     // Instruction: Transfer Accumulator to Y
     fn tay(&self, _cpu: &mut CPU) {
-         
+        _cpu.reg_y = _cpu.reg_acc;
+
+        _cpu.set_status_flags(_cpu.reg_y == 0, StatusFlags::ZERO);
+        _cpu.set_status_flags((_cpu.reg_y & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // Instruction: Transfer Stack Pointer to X
+    // TODO Instruction: Transfer Stack Pointer to X
 	fn tsx(&self, _cpu: &mut CPU) {
          
     }
 
     // Instruction: Transfer X to Accumulator
     fn txa(&self, _cpu: &mut CPU) {
-         
+        _cpu.reg_acc = _cpu.reg_x;
+
+        _cpu.set_status_flags(_cpu.reg_acc == 0, StatusFlags::ZERO);
+        _cpu.set_status_flags((_cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // Instruction: Transfer X to Stack Pointer
+    // TODO Instruction: Transfer X to Stack Pointer
     fn txs(&self, _cpu: &mut CPU) {
          
     }
 
     // Instruction: Transfer Y to Accumulator
     fn tya(&self, _cpu: &mut CPU) {
-         
+        _cpu.reg_acc = _cpu.reg_y;
+
+        _cpu.set_status_flags(_cpu.reg_acc == 0, StatusFlags::ZERO);
+        _cpu.set_status_flags((_cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
     fn xxx(&self, _cpu: &mut CPU) {

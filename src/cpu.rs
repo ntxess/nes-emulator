@@ -21,7 +21,7 @@ pub struct CPU {
     pub reg_x:         u8,
     pub reg_y:         u8,
     pub reg_status:    StatusFlags,
-    pub fetched:       u8,
+    pub fetched:       u16, // changed from u8, but awaiting bug
     pub memory:       [u8; 0xFFFF],
 }
 
@@ -52,7 +52,7 @@ impl CPU {
         self.memory[addr as usize]
     }
 
-    fn mem_write(&mut self, addr: u16, data: u8) {
+    pub fn mem_write(&mut self, addr: u16, data: u8) {
         self.memory[addr as usize] = data;
     }
 
@@ -62,7 +62,7 @@ impl CPU {
         (hi << 8) | (lo as u16)
     }
 
-    fn mem_write_u16(&mut self, pos: u16, data: u16) {
+    pub fn mem_write_u16(&mut self, pos: u16, data: u16) {
         let hi = (data >> 8) as u8;
         let lo = (data & 0xff) as u8;
         self.mem_write(pos, lo);
