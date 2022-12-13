@@ -13,6 +13,9 @@ pub struct InstructionSet {
 impl InstructionSet {
     pub fn new() -> Self {
         InstructionSet {
+            // Massive Instruction Set Matrix from OneLoneCoder's own NEW emulator repo, Thank you!
+            // Copyright 2018, 2019, 2020, 2021 OneLoneCoder.com
+            // This matrix was modified from OneLoneCoder's C++ project to RUST.
             matrix: vec![
                 Instruction{opcode: Box::new(InstructionSet::brk), addrmode: Box::new(InstructionSet::imm), cycle: 7},
                 Instruction{opcode: Box::new(InstructionSet::ora), addrmode: Box::new(InstructionSet::izx), cycle: 6},
