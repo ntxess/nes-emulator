@@ -2,7 +2,7 @@ use crate::opcodes::InstructionSet;
 use bitflags::bitflags;
 
 bitflags! {
-    struct StatusFlags: u8 {
+    pub struct StatusFlags: u8 {
         const CARRY     = 0b00000001;
         const ZERO      = 0b00000010;
         const INTERRUPT = 0b00000100;
@@ -20,7 +20,7 @@ pub struct CPU {
     pub reg_acc:       u8,
     pub reg_x:         u8,
     pub reg_y:         u8,
-    pub reg_status:    u8,
+    pub reg_status:    StatusFlags,
     pub fetched:       u8,
     pub memory:       [u8; 0xFFFF],
 }
@@ -33,9 +33,17 @@ impl CPU {
             reg_acc:       0x00,
             reg_x:         0x00,
             reg_y:         0x00,
-            reg_status:    0x00,
+            reg_status:    StatusFlags::from_bits_truncate(0b100100),
             fetched:       0x00,
             memory:       [0; 0xFFFF],
+        }
+    }
+
+    pub fn set_status_flags(&mut self, condition: bool, flag: StatusFlags) {
+        if condition {
+            self.reg_status.insert(flag);
+        } else {
+            self.reg_status.remove(flag);
         }
     }
 
@@ -64,7 +72,7 @@ impl CPU {
     pub fn reset(&mut self) {
         self.reg_acc = 0;
         self.reg_x = 0;
-        self.reg_status = 0;
+        self.reg_status = StatusFlags::from_bits_truncate(0b100100);
 
         // Reset program counter to the start of program ROM
         self.reg_pc = self.mem_read_u16(0xFFFC);
@@ -104,8 +112,8 @@ mod tests {
 
         cpu.load_and_run(vec![0xa9, 0x05, 0x00]);
         assert_eq!(cpu.reg_acc, 5);
-        assert!(cpu.reg_status & 0b0000_0010 == 0);
-        assert!(cpu.reg_status & 0b1000_0000 == 0);
+        assert!(cpu.reg_status.bits() & 0b0000_0010 == 0);
+        assert!(cpu.reg_status.bits() & 0b1000_0000 == 0);
     }
 
     #[test]
@@ -113,7 +121,7 @@ mod tests {
         let mut cpu = CPU::new();
 
         cpu.load_and_run(vec![0xa9, 0x00, 0x00]);
-        assert!(cpu.reg_status & 0b0000_0010 == 0b10);
+        assert!(cpu.reg_status.bits() & 0b0000_0010 == 0b10);
     }
     
     #[test]
@@ -121,7 +129,7 @@ mod tests {
         let mut cpu = CPU::new();
 
         cpu.load_and_run(vec![0xa9, 0xff, 0x00]);
-        assert!(cpu.reg_status & 0b1000_0000 == 0b1000_0000);
+        assert!(cpu.reg_status.bits() & 0b1000_0000 == 0b1000_0000);
 
     }
 

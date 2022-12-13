@@ -1,4 +1,4 @@
-use crate::cpu::CPU;
+use crate::cpu::{CPU, StatusFlags};
 
 pub struct Instruction {
     opcode:   Box<dyn Fn(&InstructionSet, &mut CPU)>,
@@ -404,56 +404,59 @@ impl InstructionSet {
         let data = _cpu.mem_read(_cpu.fetched as u16);
         _cpu.reg_acc = _cpu.reg_acc & data;
 
-        if _cpu.reg_acc == 0 {
-            _cpu.reg_status = _cpu.reg_status | 0b0000_0010;
-        } else {
-            _cpu.reg_status = _cpu.reg_status & 0b1111_1101;
-        }
-
-        if _cpu.reg_acc & 0b1000_0000 != 0 {
-            _cpu.reg_status = _cpu.reg_status | 0b1000_0000;
-        } else {
-            _cpu.reg_status = _cpu.reg_status & 0b0111_1111;
-        }
+        _cpu.set_status_flags(_cpu.reg_acc == 0, StatusFlags::ZERO);
+        _cpu.set_status_flags((_cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
     // Instruction: Arithmetic Shift Left
     fn asl(&self, _cpu: &mut CPU) {
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
+
 
     }
 
     // Instruction: Branch if Carry Clear
     fn bcc(&self, _cpu: &mut CPU) {
-
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
+        
+        if !_cpu.reg_status.contains(StatusFlags::CARRY) {
+            _cpu.reg_pc = _cpu.reg_pc.wrapping_add(_cpu.fetched as u16);
+        }
     }
 
     // Instruction:  Branch if Carrt Set
 	fn bcs(&self, _cpu: &mut CPU) {
-
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
+        
     }
 
     // Instruction: Branch if Equal
     fn beq(&self, _cpu: &mut CPU) {
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
 
     }
 
     // Instruction: Bit Test
     fn bit(&self, _cpu: &mut CPU) {
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
 
     }
 
     // Instruction: Branch if Minus
     fn bmi(&self, _cpu: &mut CPU) {
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
 
     }
 
     // Instruction: Branch if Not Equal
 	fn bne(&self, _cpu: &mut CPU) {
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
 
     }
 
     // Instruction: Branch if Positive
     fn bpl(&self, _cpu: &mut CPU) {
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
 
     }
 
@@ -464,11 +467,13 @@ impl InstructionSet {
 
     // Instruction: Branch if Overflow Clear
     fn bvc(&self, _cpu: &mut CPU) {
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
     // Instruction: Branch Carry Flag
 	fn bvs(&self, _cpu: &mut CPU) {
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
@@ -494,21 +499,25 @@ impl InstructionSet {
 
     // Instruction: Compare
     fn cmp(&self, _cpu: &mut CPU) {
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
     // Instruction: Compare X Register
     fn cpx(&self, _cpu: &mut CPU) {
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
     // Instruction: Compare Y Register
     fn cpy(&self, _cpu: &mut CPU) {
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
     // Instruction: Decrement Memory
 	fn dec(&self, _cpu: &mut CPU) {
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
@@ -524,11 +533,13 @@ impl InstructionSet {
 
     // Instruction: Exclusive OR
     fn eor(&self, _cpu: &mut CPU) {
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
     // Instruction: Increment Memory
 	fn inc(&self, _cpu: &mut CPU) {
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
@@ -536,17 +547,8 @@ impl InstructionSet {
     fn inx(&self, _cpu: &mut CPU) {
         _cpu.reg_x = _cpu.reg_x.wrapping_add(1);
 
-        if _cpu.reg_acc == 0 {
-            _cpu.reg_status = _cpu.reg_status | 0b0000_0010;
-        } else {
-            _cpu.reg_status = _cpu.reg_status & 0b1111_1101;
-        }
-
-        if _cpu.reg_acc & 0b1000_0000 != 0 {
-            _cpu.reg_status = _cpu.reg_status | 0b1000_0000;
-        } else {
-            _cpu.reg_status = _cpu.reg_status & 0b0111_1111;
-        }
+        _cpu.set_status_flags(_cpu.reg_acc == 0, StatusFlags::ZERO);
+        _cpu.set_status_flags((_cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
     // Instruction: Increment Y Register
@@ -556,11 +558,13 @@ impl InstructionSet {
 
     // Instruction: Jump
     fn jmp(&self, _cpu: &mut CPU) {
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
     // Instruction: Jump to Subroutine
 	fn jsr(&self, _cpu: &mut CPU) {
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
@@ -569,31 +573,25 @@ impl InstructionSet {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
         _cpu.reg_acc = _cpu.fetched;
 
-        if _cpu.reg_acc == 0 {
-            _cpu.reg_status = _cpu.reg_status | 0b0000_0010;
-        } else {
-            _cpu.reg_status = _cpu.reg_status & 0b1111_1101;
-        }
-
-        if _cpu.reg_acc & 0b1000_0000 != 0 {
-            _cpu.reg_status = _cpu.reg_status | 0b1000_0000;
-        } else {
-            _cpu.reg_status = _cpu.reg_status & 0b0111_1111;
-        }
+        _cpu.set_status_flags(_cpu.reg_acc == 0, StatusFlags::ZERO);
+        _cpu.set_status_flags((_cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
     // Instruction: Load X Register
     fn ldx(&self, _cpu: &mut CPU) {
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
     // Instruction: Load Y Register
     fn ldy(&self, _cpu: &mut CPU) {
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
     // Instruction: Logical Shift Right
 	fn lsr(&self, _cpu: &mut CPU) {
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
@@ -604,6 +602,7 @@ impl InstructionSet {
 
     // Instruction: Logical Inclusive OR
     fn ora(&self, _cpu: &mut CPU) {
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
@@ -629,11 +628,13 @@ impl InstructionSet {
 
     // Instruction: Rotate Left
     fn rol(&self, _cpu: &mut CPU) {
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
     // Instruction: Rotate Right
 	fn ror(&self, _cpu: &mut CPU) {
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
@@ -649,6 +650,7 @@ impl InstructionSet {
 
     // Instruction: Subtract with Carry
     fn sbc(&self, _cpu: &mut CPU) {
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
@@ -669,34 +671,28 @@ impl InstructionSet {
 
     // Instruction: Store Accumulator
     fn sta(&self, _cpu: &mut CPU) {
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
     // Instruction: Store X Register
 	fn stx(&self, _cpu: &mut CPU) {
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
     // Instruction: Store Y Register
     fn sty(&self, _cpu: &mut CPU) {
+        self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
          
     }
 
     // Instruction: Transfer Accumulator to X
     fn tax(&self, _cpu: &mut CPU) {
         _cpu.reg_x = _cpu.reg_acc;
-            
-        if _cpu.reg_x == 0 {
-            _cpu.reg_status = _cpu.reg_status | 0b0000_0010;
-        } else {
-            _cpu.reg_status = _cpu.reg_status & 0b1111_1101;
-        }
 
-        if _cpu.reg_x & 0b1000_0000 != 0 {
-            _cpu.reg_status = _cpu.reg_status | 0b1000_0000;
-        } else {
-            _cpu.reg_status = _cpu.reg_status & 0b0111_1111;
-        }
+        _cpu.set_status_flags(_cpu.reg_x == 0, StatusFlags::ZERO);
+        _cpu.set_status_flags((_cpu.reg_x & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
     // Instruction: Transfer Accumulator to Y
