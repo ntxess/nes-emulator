@@ -14,8 +14,8 @@ impl InstructionSet {
     pub fn new() -> Self {
         InstructionSet {
             // Massive Instruction Set Matrix from OneLoneCoder's own NEW emulator repo, Thank you!
-            // Copyright 2018, 2019, 2020, 2021 OneLoneCoder.com
             // This matrix was modified from OneLoneCoder's C++ project to RUST.
+            // Copyright 2018, 2019, 2020, 2021 OneLoneCoder.com
             matrix: vec![
                 Instruction{opcode: Box::new(InstructionSet::brk), addrmode: Box::new(InstructionSet::imm), cycle: 7},
                 Instruction{opcode: Box::new(InstructionSet::ora), addrmode: Box::new(InstructionSet::izx), cycle: 6},
@@ -524,7 +524,6 @@ impl InstructionSet {
     // TODO Instruction: Compare
     fn cmp(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
-         
     }
 
     // TODO Instruction: Compare X Register
@@ -539,20 +538,31 @@ impl InstructionSet {
          
     }
 
-    // TODO Instruction: Decrement Memory
+    // Instruction: Decrement Memory
 	fn dec(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
-         
+
+        let data = _cpu.mem_read(_cpu.fetched).wrapping_sub(1);
+        _cpu.mem_write(_cpu.fetched, data);
+
+        _cpu.set_status_flags(data == 0, StatusFlags::ZERO);
+        _cpu.set_status_flags((data & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // TODO Instruction: Decrement X Register
+    // Instruction: Decrement X Register
     fn dex(&self, _cpu: &mut CPU) {
-         
+        _cpu.reg_x = _cpu.reg_x.wrapping_sub(1);
+
+        _cpu.set_status_flags(_cpu.reg_x == 0, StatusFlags::ZERO);
+        _cpu.set_status_flags((_cpu.reg_x & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // TODO Instruction: Decrement Y Register
+    // Instruction: Decrement Y Register
     fn dey(&self, _cpu: &mut CPU) {
-         
+        _cpu.reg_y = _cpu.reg_y.wrapping_sub(1);
+
+        _cpu.set_status_flags(_cpu.reg_y == 0, StatusFlags::ZERO);
+        _cpu.set_status_flags((_cpu.reg_y & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
     // TODO Instruction: Exclusive OR
@@ -561,23 +571,31 @@ impl InstructionSet {
          
     }
 
-    // TODO Instruction: Increment Memory
+    // Instruction: Increment Memory
 	fn inc(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
-         
+
+        let data = _cpu.mem_read(_cpu.fetched).wrapping_add(1);
+        _cpu.mem_write(_cpu.fetched, data);
+
+        _cpu.set_status_flags(data == 0, StatusFlags::ZERO);
+        _cpu.set_status_flags((data & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
     // Instruction: Increment X Register
     fn inx(&self, _cpu: &mut CPU) {
         _cpu.reg_x = _cpu.reg_x.wrapping_add(1);
 
-        _cpu.set_status_flags(_cpu.reg_acc == 0, StatusFlags::ZERO);
-        _cpu.set_status_flags((_cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
+        _cpu.set_status_flags(_cpu.reg_x == 0, StatusFlags::ZERO);
+        _cpu.set_status_flags((_cpu.reg_x & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // TODO Instruction: Increment Y Register
+    // Instruction: Increment Y Register
     fn iny(&self, _cpu: &mut CPU) {
-         
+        _cpu.reg_y = _cpu.reg_y.wrapping_add(1);
+
+        _cpu.set_status_flags(_cpu.reg_y == 0, StatusFlags::ZERO);
+        _cpu.set_status_flags((_cpu.reg_y & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
     // TODO Instruction: Jump
