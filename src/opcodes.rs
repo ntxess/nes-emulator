@@ -415,7 +415,6 @@ impl InstructionSet {
     fn asl(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
 
-
     }
 
     // Instruction: Branch if Carry Clear
@@ -445,10 +444,15 @@ impl InstructionSet {
         }
     }
 
-    // TODO Instruction: Bit Test
+    // Instruction: Bit Test
     fn bit(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
 
+        let data = _cpu.mem_read(_cpu.fetched);
+
+        _cpu.set_status_flags((_cpu.reg_acc & data) == 0, StatusFlags::ZERO);
+        _cpu.set_status_flags((_cpu.fetched & StatusFlags::OVERFLOW.bits() as u16) != 0, StatusFlags::OVERFLOW);
+        _cpu.set_status_flags((_cpu.fetched & StatusFlags::NEGATIVE.bits() as u16) != 0, StatusFlags::NEGATIVE);
     }
 
     // Instruction: Branch if Minus
@@ -521,21 +525,40 @@ impl InstructionSet {
         _cpu.reg_status.remove(StatusFlags::OVERFLOW);
     }
 
-    // TODO Instruction: Compare
+    // Instruction: Compare
     fn cmp(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
+
+        let data = _cpu.mem_read(_cpu.fetched);
+        let result = _cpu.reg_acc.wrapping_sub(data);
+
+        _cpu.set_status_flags(_cpu.reg_acc >= data, StatusFlags::CARRY);
+        _cpu.set_status_flags(_cpu.reg_acc == data, StatusFlags::ZERO);
+        _cpu.set_status_flags((result & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // TODO Instruction: Compare X Register
+    // Instruction: Compare X Register
     fn cpx(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
-         
+
+        let data = _cpu.mem_read(_cpu.fetched);
+        let result = _cpu.reg_x.wrapping_sub(data);
+
+        _cpu.set_status_flags(_cpu.reg_x >= data, StatusFlags::CARRY);
+        _cpu.set_status_flags(_cpu.reg_x == data, StatusFlags::ZERO);
+        _cpu.set_status_flags((result & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // TODO Instruction: Compare Y Register
+    // Instruction: Compare Y Register
     fn cpy(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
-         
+
+        let data = _cpu.mem_read(_cpu.fetched);
+        let result = _cpu.reg_y.wrapping_sub(data);
+
+        _cpu.set_status_flags(_cpu.reg_y >= data, StatusFlags::CARRY);
+        _cpu.set_status_flags(_cpu.reg_y == data, StatusFlags::ZERO);
+        _cpu.set_status_flags((result & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
     // Instruction: Decrement Memory
@@ -565,10 +588,15 @@ impl InstructionSet {
         _cpu.set_status_flags((_cpu.reg_y & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // TODO Instruction: Exclusive OR
+    // Instruction: Exclusive OR
     fn eor(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
-         
+        
+        let data = _cpu.mem_read(_cpu.fetched);
+        _cpu.reg_acc = _cpu.reg_acc ^ data;
+
+        _cpu.set_status_flags(_cpu.reg_acc == 0, StatusFlags::ZERO);
+        _cpu.set_status_flags((_cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
     // Instruction: Increment Memory
@@ -613,22 +641,31 @@ impl InstructionSet {
     // Instruction: Load Accumulator
     fn lda(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
+
         _cpu.reg_acc = _cpu.fetched as u8;
 
         _cpu.set_status_flags(_cpu.reg_acc == 0, StatusFlags::ZERO);
         _cpu.set_status_flags((_cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // TODO Instruction: Load X Register
+    // Instruction: Load X Register
     fn ldx(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
-         
+
+        _cpu.reg_x = _cpu.fetched as u8;
+
+        _cpu.set_status_flags(_cpu.reg_x == 0, StatusFlags::ZERO);
+        _cpu.set_status_flags((_cpu.reg_x & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // TODO Instruction: Load Y Register
+    // Instruction: Load Y Register
     fn ldy(&self, _cpu: &mut CPU) {
         self.get_addrmode(_cpu.memory[_cpu.reg_pc as usize] as usize)(_cpu);
-         
+        
+        _cpu.reg_y = _cpu.fetched as u8;
+
+        _cpu.set_status_flags(_cpu.reg_y == 0, StatusFlags::ZERO);
+        _cpu.set_status_flags((_cpu.reg_y & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
     // TODO Instruction: Logical Shift Right
@@ -637,10 +674,8 @@ impl InstructionSet {
          
     }
 
-    // TODO Instruction: No Operation
-    fn nop(&self, _cpu: &mut CPU) {
-         
-    }
+    // Instruction: No Operation
+    fn nop(&self, _cpu: &mut CPU) {}
 
     // TODO Instruction: Logical Inclusive OR
     fn ora(&self, _cpu: &mut CPU) {
@@ -774,7 +809,8 @@ impl InstructionSet {
         _cpu.set_status_flags((_cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    fn xxx(&self, _cpu: &mut CPU) {
-         
-    }
+    // Added Instruction to fill the Opcode Matrix; does not exist in the real NES instruction set
+    // Effectively does nothing but does nothing better than NOP
+    // According to OLC not all NOPs are similar so this opcode exist as a true NOP
+    fn xxx(&self, _cpu: &mut CPU) {}
 }
