@@ -21,7 +21,6 @@ pub struct CPU {
     pub reg_x:         u8,
     pub reg_y:         u8,
     pub reg_status:    StatusFlags,
-    pub fetched:       u16, // changed from u8, but awaiting bug
     pub memory:       [u8; 0xFFFF],
 }
 
@@ -34,7 +33,6 @@ impl CPU {
             reg_x:         0x00,
             reg_y:         0x00,
             reg_status:    StatusFlags::from_bits_truncate(0b100100),
-            fetched:       0x00,
             memory:       [0; 0xFFFF],
         }
     }
@@ -95,7 +93,7 @@ impl CPU {
         let matrix = InstructionSet::new();
 
         while (self.reg_pc as usize) < self.memory.len() {
-            matrix.get_opcode(self.memory[self.reg_pc as usize] as usize)(&matrix, self);
+            matrix.call_opcode(self.memory[self.reg_pc as usize])(&matrix, self);
             //matrix.get_cycle(self.memory[self.reg_pc as usize] as usize);
             self.reg_pc += 1;
         }
