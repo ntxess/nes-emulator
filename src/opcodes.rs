@@ -290,18 +290,15 @@ impl InstructionSet {
         return self.matrix[code].cycle;
     }
 
-    // TODO Addressing Mode: Implicit
-    fn imp(_cpu: &mut CPU) -> u16 {
-        //fetched = _cpu.reg_acc;
-        0
-    }
+    // Addressing Mode: Implicit
+    fn imp(_cpu: &mut CPU) -> u16 { 0 }
 
     // Addressing Mode: Immediate
     fn imm(_cpu: &mut CPU) -> u16 {
         _cpu.reg_pc += 1;
 
-        let data = _cpu.memory[(_cpu.reg_pc) as usize] as u16;
-        data
+        let address = _cpu.memory[(_cpu.reg_pc) as usize] as u16;
+        address
     }
 
     // Addressing Mode: Zero Page
@@ -309,8 +306,7 @@ impl InstructionSet {
         _cpu.reg_pc += 1;
 
         let address = _cpu.memory[(_cpu.reg_pc) as usize] as u16;
-        let data = _cpu.memory[(address) as usize] as u16;
-        data
+        address
     }		
 
     // Addressing Mode: Zero Page, X
@@ -319,8 +315,7 @@ impl InstructionSet {
 
         let pos = _cpu.memory[(_cpu.reg_pc) as usize];
         let address = pos.wrapping_add(_cpu.reg_x) as u16;
-        let data = _cpu.memory[(address) as usize] as u16;
-        data
+        address
     }
 
     // Addressing Mode: Zero Page, Y
@@ -329,20 +324,21 @@ impl InstructionSet {
 
         let pos = _cpu.memory[(_cpu.reg_pc) as usize];
         let address = pos.wrapping_add(_cpu.reg_y) as u16;
-        let data = _cpu.memory[(address) as usize] as u16;
-        data
+        address
     }
 
-    // TODO Addressing Mode: Relative
-    fn rel(_cpu: &mut CPU) -> u16 {
-        // _cpu.reg_pc += 1;
-        0
+    // Addressing Mode: Relative
+    fn rel(_cpu: &mut CPU) -> u16 { 
+        _cpu.reg_pc += 1;
+        _cpu.reg_pc
     }
 
-    // TODO Addressing Mode: Absolute
+    // Addressing Mode: Absolute
 	fn abs(_cpu: &mut CPU) -> u16 {
-        // _cpu.reg_pc += 1;
-        0
+        _cpu.reg_pc += 1;
+
+        let address = _cpu.mem_read_u16(_cpu.reg_pc);
+        address
     }
 
     // Addressing Mode: Absolute, X
@@ -351,8 +347,7 @@ impl InstructionSet {
 
         let base = _cpu.mem_read_u16(_cpu.reg_pc);
         let address = base.wrapping_add(_cpu.reg_x as u16);
-        let data = _cpu.memory[(address) as usize] as u16;
-        data
+        address
     }
 
     // Addressing Mode: Absolute, Y
@@ -361,8 +356,7 @@ impl InstructionSet {
 
         let base = _cpu.mem_read_u16(_cpu.reg_pc);
         let address = base.wrapping_add(_cpu.reg_y as u16);
-        let data = _cpu.memory[(address) as usize] as u16;
-        data
+        address
     }	
 
     // TODO Addressing Mode: Indirect
@@ -380,8 +374,7 @@ impl InstructionSet {
         let lo = _cpu.mem_read(ptr as u16);
         let hi = _cpu.mem_read(ptr.wrapping_add(1) as u16);
         let address = (hi as u16) << 8 | (lo as u16);
-        let data = _cpu.memory[(address) as usize] as u16;
-        data
+        address
     }
 
     // Addressing Mode: Indirect Indexed Y
@@ -393,8 +386,7 @@ impl InstructionSet {
         let lo = _cpu.mem_read(ptr as u16);
         let hi = _cpu.mem_read(ptr.wrapping_add(1) as u16);
         let address = (hi as u16) << 8 | (lo as u16);
-        let data = _cpu.memory[(address) as usize] as u16;
-        data
+        address
     }
 
     // TODO Instruction: Add with Carry
@@ -404,8 +396,8 @@ impl InstructionSet {
 
     // Instruction: Logic AND
     fn and(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
-        let data = _cpu.mem_read(fetched);
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+        let data = _cpu.mem_read(address);
         _cpu.reg_acc = _cpu.reg_acc & data;
 
         _cpu.set_status_flags(_cpu.reg_acc == 0, StatusFlags::ZERO);
@@ -414,72 +406,79 @@ impl InstructionSet {
 
     // TODO Instruction: Arithmetic Shift Left
     fn asl(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+        let data = _cpu.mem_read(address);
+
 
     }
 
     // Instruction: Branch if Carry Clear
     fn bcc(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
-        
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+
         if !_cpu.reg_status.contains(StatusFlags::CARRY) {
-            _cpu.reg_pc = _cpu.reg_pc.wrapping_add(fetched);
+            let jump_addr = _cpu.mem_read(address) as i8;
+            _cpu.reg_pc = _cpu.reg_pc.wrapping_add(1).wrapping_add(jump_addr as u16);
         }
     }
 
     // Instruction: Branch if Carry Set
 	fn bcs(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
-        
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+
         if _cpu.reg_status.contains(StatusFlags::CARRY) {
-            _cpu.reg_pc = _cpu.reg_pc.wrapping_add(fetched);
+            let jump_addr = _cpu.mem_read(address) as i8;
+            _cpu.reg_pc = _cpu.reg_pc.wrapping_add(1).wrapping_add(jump_addr as u16);
         }
     }
 
     // Instruction: Branch if Equal
     fn beq(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
 
         if _cpu.reg_status.contains(StatusFlags::ZERO) {
-            _cpu.reg_pc = _cpu.reg_pc.wrapping_add(fetched);
+            let jump_addr = _cpu.mem_read(address) as i8;
+            _cpu.reg_pc = _cpu.reg_pc.wrapping_add(1).wrapping_add(jump_addr as u16);
         }
     }
 
     // Instruction: Bit Test
     fn bit(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
-
-        let data = _cpu.mem_read(fetched);
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+        let data = _cpu.mem_read(address);
 
         _cpu.set_status_flags((_cpu.reg_acc & data) == 0, StatusFlags::ZERO);
-        _cpu.set_status_flags((fetched & StatusFlags::OVERFLOW.bits() as u16) != 0, StatusFlags::OVERFLOW);
-        _cpu.set_status_flags((fetched & StatusFlags::NEGATIVE.bits() as u16) != 0, StatusFlags::NEGATIVE);
+        _cpu.set_status_flags((address & StatusFlags::OVERFLOW.bits() as u16) != 0, StatusFlags::OVERFLOW);
+        _cpu.set_status_flags((address & StatusFlags::NEGATIVE.bits() as u16) != 0, StatusFlags::NEGATIVE);
     }
 
     // Instruction: Branch if Minus
     fn bmi(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
 
         if _cpu.reg_status.contains(StatusFlags::NEGATIVE) {
-            _cpu.reg_pc = _cpu.reg_pc.wrapping_add(fetched);
+            let jump_addr = _cpu.mem_read(address) as i8;
+            _cpu.reg_pc = _cpu.reg_pc.wrapping_add(1).wrapping_add(jump_addr as u16);
         }
     }
 
     // Instruction: Branch if Not Equal
 	fn bne(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
 
         if !_cpu.reg_status.contains(StatusFlags::ZERO) {
-            _cpu.reg_pc = _cpu.reg_pc.wrapping_add(fetched);
+            let jump_addr = _cpu.mem_read(address) as i8;
+            _cpu.reg_pc = _cpu.reg_pc.wrapping_add(1).wrapping_add(jump_addr as u16);
         }
     }
 
     // Instruction: Branch if Positive
     fn bpl(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
 
         if !_cpu.reg_status.contains(StatusFlags::NEGATIVE) {
-            _cpu.reg_pc = _cpu.reg_pc.wrapping_add(fetched);
+            let jump_addr = _cpu.mem_read(address) as i8;
+            _cpu.reg_pc = _cpu.reg_pc.wrapping_add(1).wrapping_add(jump_addr as u16);
         }
     }
 
@@ -489,20 +488,22 @@ impl InstructionSet {
     }
 
     // Instruction: Branch if Overflow Clear
-    fn bvc(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
-        
+    fn bvc(&self, _cpu: &mut CPU) {        
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+
         if !_cpu.reg_status.contains(StatusFlags::OVERFLOW) {
-            _cpu.reg_pc = _cpu.reg_pc.wrapping_add(fetched);
+            let jump_addr = _cpu.mem_read(address) as i8;
+            _cpu.reg_pc = _cpu.reg_pc.wrapping_add(1).wrapping_add(jump_addr as u16);
         }
     }
 
     // Instruction: Branch Carry Flag
 	fn bvs(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
-        
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+
         if _cpu.reg_status.contains(StatusFlags::OVERFLOW) {
-            _cpu.reg_pc = _cpu.reg_pc.wrapping_add(fetched);
+            let jump_addr = _cpu.mem_read(address) as i8;
+            _cpu.reg_pc = _cpu.reg_pc.wrapping_add(1).wrapping_add(jump_addr as u16);     
         }
     }
 
@@ -528,9 +529,9 @@ impl InstructionSet {
 
     // Instruction: Compare
     fn cmp(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
 
-        let data = _cpu.mem_read(fetched);
+        let data = _cpu.mem_read(address);
         let result = _cpu.reg_acc.wrapping_sub(data);
 
         _cpu.set_status_flags(_cpu.reg_acc >= data, StatusFlags::CARRY);
@@ -540,9 +541,9 @@ impl InstructionSet {
 
     // Instruction: Compare X Register
     fn cpx(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
 
-        let data = _cpu.mem_read(fetched);
+        let data = _cpu.mem_read(address);
         let result = _cpu.reg_x.wrapping_sub(data);
 
         _cpu.set_status_flags(_cpu.reg_x >= data, StatusFlags::CARRY);
@@ -552,9 +553,9 @@ impl InstructionSet {
 
     // Instruction: Compare Y Register
     fn cpy(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
 
-        let data = _cpu.mem_read(fetched);
+        let data = _cpu.mem_read(address);
         let result = _cpu.reg_y.wrapping_sub(data);
 
         _cpu.set_status_flags(_cpu.reg_y >= data, StatusFlags::CARRY);
@@ -564,10 +565,10 @@ impl InstructionSet {
 
     // Instruction: Decrement Memory
 	fn dec(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
 
-        let data = _cpu.mem_read(fetched).wrapping_sub(1);
-        _cpu.mem_write(fetched, data);
+        let data = _cpu.mem_read(address).wrapping_sub(1);
+        _cpu.mem_write(address, data);
 
         _cpu.set_status_flags(data == 0, StatusFlags::ZERO);
         _cpu.set_status_flags((data & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
@@ -591,9 +592,9 @@ impl InstructionSet {
 
     // Instruction: Exclusive OR
     fn eor(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
         
-        let data = _cpu.mem_read(fetched);
+        let data = _cpu.mem_read(address);
         _cpu.reg_acc = _cpu.reg_acc ^ data;
 
         _cpu.set_status_flags(_cpu.reg_acc == 0, StatusFlags::ZERO);
@@ -602,10 +603,10 @@ impl InstructionSet {
 
     // Instruction: Increment Memory
 	fn inc(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
 
-        let data = _cpu.mem_read(fetched).wrapping_add(1);
-        _cpu.mem_write(fetched, data);
+        let data = _cpu.mem_read(address).wrapping_add(1);
+        _cpu.mem_write(address, data);
 
         _cpu.set_status_flags(data == 0, StatusFlags::ZERO);
         _cpu.set_status_flags((data & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
@@ -629,21 +630,21 @@ impl InstructionSet {
 
     // TODO Instruction: Jump
     fn jmp(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
          
     }
 
     // TODO Instruction: Jump to Subroutine
 	fn jsr(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
          
     }
 
     // Instruction: Load Accumulator
     fn lda(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
 
-        _cpu.reg_acc = fetched as u8;
+        _cpu.reg_acc = address as u8;
 
         _cpu.set_status_flags(_cpu.reg_acc == 0, StatusFlags::ZERO);
         _cpu.set_status_flags((_cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
@@ -651,9 +652,9 @@ impl InstructionSet {
 
     // Instruction: Load X Register
     fn ldx(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
 
-        _cpu.reg_x = fetched as u8;
+        _cpu.reg_x = address as u8;
 
         _cpu.set_status_flags(_cpu.reg_x == 0, StatusFlags::ZERO);
         _cpu.set_status_flags((_cpu.reg_x & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
@@ -661,9 +662,9 @@ impl InstructionSet {
 
     // Instruction: Load Y Register
     fn ldy(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
         
-        _cpu.reg_y = fetched as u8;
+        _cpu.reg_y = address as u8;
 
         _cpu.set_status_flags(_cpu.reg_y == 0, StatusFlags::ZERO);
         _cpu.set_status_flags((_cpu.reg_y & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
@@ -671,7 +672,7 @@ impl InstructionSet {
 
     // TODO Instruction: Logical Shift Right
 	fn lsr(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
          
     }
 
@@ -680,7 +681,7 @@ impl InstructionSet {
 
     // TODO Instruction: Logical Inclusive OR
     fn ora(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
          
     }
 
@@ -706,13 +707,13 @@ impl InstructionSet {
 
     // TODO Instruction: Rotate Left
     fn rol(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
          
     }
 
     // TODO Instruction: Rotate Right
 	fn ror(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
          
     }
 
@@ -728,7 +729,7 @@ impl InstructionSet {
 
     // TODO Instruction: Subtract with Carry
     fn sbc(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
          
     }
 
@@ -749,23 +750,23 @@ impl InstructionSet {
 
     // Instruction: Store Accumulator
     fn sta(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
          
-        _cpu.mem_write(fetched, _cpu.reg_acc);
+        _cpu.mem_write(address, _cpu.reg_acc);
     }
 
     // Instruction: Store X Register
 	fn stx(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
          
-        _cpu.mem_write(fetched, _cpu.reg_x);
+        _cpu.mem_write(address, _cpu.reg_x);
     }
 
     // Instruction: Store Y Register
     fn sty(&self, _cpu: &mut CPU) {
-        let fetched = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
+        let address = self.call_addrmode(_cpu.memory[_cpu.reg_pc as usize])(_cpu);
         
-        _cpu.mem_write(fetched, _cpu.reg_y);
+        _cpu.mem_write(address, _cpu.reg_y);
     }
 
     // Instruction: Transfer Accumulator to X
