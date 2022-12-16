@@ -282,16 +282,20 @@ impl InstructionSet {
         return &self.matrix[code as usize].opcode;
     }
 
-    pub fn call_addrmode(&self, code: u8) -> &Box<dyn Fn(&mut CPU) -> u16> {
+    pub fn get_address(&self, code: u8) -> &Box<dyn Fn(&mut CPU) -> u16> {
         return &self.matrix[code as usize].addrmode;
     }
 
-    pub fn get_cycle(&self, code: usize) -> u8 {
-        return self.matrix[code].cycle;
+    pub fn get_cycle(&self, code: u8) -> u8 {
+        return self.matrix[code as usize].cycle;
     }
 
-    // Addressing Mode: Implicit
-    fn imp(cpu: &mut CPU) -> u16 { 0 }
+    // Addressing Mode: Implicit / Accumulator
+    // Implicit addressing mode requires no additional logic to obtain address
+    // Thus, we can use it for opcodes that require the Accumulator addressing mode as well
+    fn imp(cpu: &mut CPU) -> u16 { 
+        cpu.reg_acc as u16
+    }
 
     // Addressing Mode: Immediate
     fn imm(cpu: &mut CPU) -> u16 {
@@ -300,7 +304,7 @@ impl InstructionSet {
     }
 
     // Addressing Mode: Zero Page
-	fn zp0(cpu: &mut CPU) -> u16 {
+    fn zp0(cpu: &mut CPU) -> u16 {
         cpu.reg_pc += 1;
 
         let address = cpu.mem_read(cpu.reg_pc) as u16;
@@ -317,7 +321,7 @@ impl InstructionSet {
     }
 
     // Addressing Mode: Zero Page, Y
-	fn zpy(cpu: &mut CPU) -> u16 {
+    fn zpy(cpu: &mut CPU) -> u16 {
         cpu.reg_pc += 1;
 
         let pos = cpu.mem_read(cpu.reg_pc);
@@ -332,7 +336,7 @@ impl InstructionSet {
     }
 
     // Addressing Mode: Absolute
-	fn abs(cpu: &mut CPU) -> u16 {
+    fn abs(cpu: &mut CPU) -> u16 {
         cpu.reg_pc += 1;
 
         let address = cpu.mem_read_u16(cpu.reg_pc);
@@ -349,7 +353,7 @@ impl InstructionSet {
     }
 
     // Addressing Mode: Absolute, Y
-	fn aby(cpu: &mut CPU) -> u16 {
+    fn aby(cpu: &mut CPU) -> u16 {
         cpu.reg_pc += 1;
 
         let base = cpu.mem_read_u16(cpu.reg_pc);
@@ -357,10 +361,15 @@ impl InstructionSet {
         address
     }	
 
-    // TODO Addressing Mode: Indirect
+    // Addressing Mode: Indirect
     fn ind(cpu: &mut CPU) -> u16 {
-        // cpu.reg_pc += 1;
-        0
+        cpu.reg_pc += 1;
+
+        let ptr = cpu.mem_read(cpu.reg_pc);
+        let lo = cpu.mem_read(ptr as u16);
+        let hi = cpu.mem_read(ptr.wrapping_add(1) as u16);
+        let address = (hi as u16) << 8 | (lo as u16);
+        address
     }
 
     // Addressing Mode: Indirect Indexed X
@@ -368,7 +377,7 @@ impl InstructionSet {
         cpu.reg_pc += 1;
 
         let base = cpu.mem_read(cpu.reg_pc);
-        let ptr: u8 = (base as u8).wrapping_add(cpu.reg_x);
+        let ptr = base.wrapping_add(cpu.reg_x);
         let lo = cpu.mem_read(ptr as u16);
         let hi = cpu.mem_read(ptr.wrapping_add(1) as u16);
         let address = (hi as u16) << 8 | (lo as u16);
@@ -380,7 +389,7 @@ impl InstructionSet {
         cpu.reg_pc += 1;
 
         let base = cpu.mem_read(cpu.reg_pc);
-        let ptr: u8 = (base as u8).wrapping_add(cpu.reg_y);
+        let ptr = base.wrapping_add(cpu.reg_y);
         let lo = cpu.mem_read(ptr as u16);
         let hi = cpu.mem_read(ptr.wrapping_add(1) as u16);
         let address = (hi as u16) << 8 | (lo as u16);
@@ -389,12 +398,14 @@ impl InstructionSet {
 
     // TODO Instruction: Add with Carry
     fn adc(&self, cpu: &mut CPU) {
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        let data = cpu.mem_read(address);
 
     }
 
     // Instruction: Logic AND
     fn and(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
         let data = cpu.mem_read(address);
         cpu.reg_acc = cpu.reg_acc & data;
 
@@ -402,17 +413,31 @@ impl InstructionSet {
         cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // TODO Instruction: Arithmetic Shift Left
+    // Instruction: Arithmetic Shift Left
     fn asl(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
-        let data = cpu.mem_read(address);
+        // Logic only for Accumulator addressing mode
+        if 0x0a == cpu.mem_read(cpu.reg_pc) {
+            let data = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu) as u8;
+            cpu.set_status_flags(data >> 7 == 1, StatusFlags::CARRY);
+            cpu.reg_acc = data << 1;
 
+            cpu.set_status_flags(cpu.reg_acc == 0, StatusFlags::ZERO);
+            cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
+        } else {
+            let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+            let mut data = cpu.mem_read(address);
+            cpu.set_status_flags(data >> 7 == 1, StatusFlags::CARRY);
+            data = data << 1;
 
+            cpu.mem_write(address, data);
+            cpu.set_status_flags(data == 0, StatusFlags::ZERO);
+            cpu.set_status_flags((data & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
+        }
     }
 
     // Instruction: Branch if Carry Clear
     fn bcc(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
 
         if !cpu.reg_status.contains(StatusFlags::CARRY) {
             let jump_addr = cpu.mem_read(address) as i8;
@@ -421,8 +446,8 @@ impl InstructionSet {
     }
 
     // Instruction: Branch if Carry Set
-	fn bcs(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
+    fn bcs(&self, cpu: &mut CPU) {
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
 
         if cpu.reg_status.contains(StatusFlags::CARRY) {
             let jump_addr = cpu.mem_read(address) as i8;
@@ -432,7 +457,7 @@ impl InstructionSet {
 
     // Instruction: Branch if Equal
     fn beq(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
 
         if cpu.reg_status.contains(StatusFlags::ZERO) {
             let jump_addr = cpu.mem_read(address) as i8;
@@ -442,7 +467,7 @@ impl InstructionSet {
 
     // Instruction: Bit Test
     fn bit(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
         let data = cpu.mem_read(address);
 
         cpu.set_status_flags((cpu.reg_acc & data) == 0, StatusFlags::ZERO);
@@ -452,7 +477,7 @@ impl InstructionSet {
 
     // Instruction: Branch if Minus
     fn bmi(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
 
         if cpu.reg_status.contains(StatusFlags::NEGATIVE) {
             let jump_addr = cpu.mem_read(address) as i8;
@@ -461,8 +486,8 @@ impl InstructionSet {
     }
 
     // Instruction: Branch if Not Equal
-	fn bne(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
+    fn bne(&self, cpu: &mut CPU) {
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
 
         if !cpu.reg_status.contains(StatusFlags::ZERO) {
             let jump_addr = cpu.mem_read(address) as i8;
@@ -472,7 +497,7 @@ impl InstructionSet {
 
     // Instruction: Branch if Positive
     fn bpl(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
 
         if !cpu.reg_status.contains(StatusFlags::NEGATIVE) {
             let jump_addr = cpu.mem_read(address) as i8;
@@ -487,7 +512,7 @@ impl InstructionSet {
 
     // Instruction: Branch if Overflow Clear
     fn bvc(&self, cpu: &mut CPU) {        
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
 
         if !cpu.reg_status.contains(StatusFlags::OVERFLOW) {
             let jump_addr = cpu.mem_read(address) as i8;
@@ -496,8 +521,8 @@ impl InstructionSet {
     }
 
     // Instruction: Branch Carry Flag
-	fn bvs(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
+    fn bvs(&self, cpu: &mut CPU) {
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
 
         if cpu.reg_status.contains(StatusFlags::OVERFLOW) {
             let jump_addr = cpu.mem_read(address) as i8;
@@ -521,13 +546,13 @@ impl InstructionSet {
     }
 
     // Instruction:  Clear Overflow Flag
-	fn clv(&self, cpu: &mut CPU) {
+    fn clv(&self, cpu: &mut CPU) {
         cpu.reg_status.remove(StatusFlags::OVERFLOW);
     }
 
     // Instruction: Compare
     fn cmp(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
         let data = cpu.mem_read(address);
         let result = cpu.reg_acc.wrapping_sub(data);
 
@@ -538,7 +563,7 @@ impl InstructionSet {
 
     // Instruction: Compare X Register
     fn cpx(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
         let data = cpu.mem_read(address);
         let result = cpu.reg_x.wrapping_sub(data);
 
@@ -549,7 +574,7 @@ impl InstructionSet {
 
     // Instruction: Compare Y Register
     fn cpy(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
         let data = cpu.mem_read(address);
         let result = cpu.reg_y.wrapping_sub(data);
 
@@ -559,8 +584,8 @@ impl InstructionSet {
     }
 
     // Instruction: Decrement Memory
-	fn dec(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
+    fn dec(&self, cpu: &mut CPU) {
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
         let data = cpu.mem_read(address).wrapping_sub(1);
         cpu.mem_write(address, data);
 
@@ -586,7 +611,7 @@ impl InstructionSet {
 
     // Instruction: Exclusive OR
     fn eor(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
         let data = cpu.mem_read(address);
         cpu.reg_acc = cpu.reg_acc ^ data;
 
@@ -595,8 +620,8 @@ impl InstructionSet {
     }
 
     // Instruction: Increment Memory
-	fn inc(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
+    fn inc(&self, cpu: &mut CPU) {
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
         let data = cpu.mem_read(address).wrapping_add(1);
         cpu.mem_write(address, data);
 
@@ -620,21 +645,33 @@ impl InstructionSet {
         cpu.set_status_flags((cpu.reg_y & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // TODO Instruction: Jump
+    // Instruction: Jump
     fn jmp(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
-         
+        // Logic only for Absolute addressing mode
+        if 0x4c == cpu.mem_read(cpu.reg_pc) {
+            cpu.reg_pc = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        } else {
+            let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+            let indirect_ref = if address & 0x00FF == 0x00FF {
+                let lo = cpu.mem_read(address);
+                let hi = cpu.mem_read(address & 0xFF00);
+                (hi as u16) << 8 | (lo as u16)
+            } else {
+                cpu.mem_read_u16(address)
+            };
+            cpu.reg_pc = indirect_ref;
+        }
     }
 
     // TODO Instruction: Jump to Subroutine
-	fn jsr(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
-         
+    fn jsr(&self, cpu: &mut CPU) {
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        
     }
 
     // Instruction: Load Accumulator
     fn lda(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
         let data = cpu.mem_read(address);
         cpu.reg_acc = data;
 
@@ -644,7 +681,7 @@ impl InstructionSet {
 
     // Instruction: Load X Register
     fn ldx(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
         let data = cpu.mem_read(address);
         cpu.reg_x = data;
 
@@ -654,7 +691,7 @@ impl InstructionSet {
 
     // Instruction: Load Y Register
     fn ldy(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
         let data = cpu.mem_read(address);
         cpu.reg_y = data;
 
@@ -662,19 +699,39 @@ impl InstructionSet {
         cpu.set_status_flags((cpu.reg_y & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // TODO Instruction: Logical Shift Right
-	fn lsr(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
-         
+    // Instruction: Logical Shift Right
+    fn lsr(&self, cpu: &mut CPU) {
+        // Logic only for Accumulator addressing mode
+        if 0x4a == cpu.mem_read(cpu.reg_pc) {
+            let data = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu) as u8;
+            cpu.set_status_flags(data & 1 == 1, StatusFlags::CARRY);
+            cpu.reg_acc = data >> 1;
+
+            cpu.set_status_flags(cpu.reg_acc == 0, StatusFlags::ZERO);
+            cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
+        } else {
+            let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+            let mut data = cpu.mem_read(address);
+            cpu.set_status_flags(data & 1 == 1, StatusFlags::CARRY);
+            data = data >> 1;
+
+            cpu.mem_write(address, data);
+            cpu.set_status_flags(data == 0, StatusFlags::ZERO);
+            cpu.set_status_flags((data & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
+        }         
     }
 
     // Instruction: No Operation
-    fn nop(&self, cpu: &mut CPU) {}
+    fn nop(&self, _cpu: &mut CPU) {}
 
-    // TODO Instruction: Logical Inclusive OR
+    // Instruction: Logical Inclusive OR
     fn ora(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
-         
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        let data = cpu.mem_read(address);
+        cpu.reg_acc = cpu.reg_acc | data;
+        
+        cpu.set_status_flags(cpu.reg_acc == 0, StatusFlags::ZERO);
+        cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
     // TODO Instruction: Push Accumulator
@@ -683,7 +740,7 @@ impl InstructionSet {
     }
 
     // TODO Instruction: Push Processor Status
-	fn php(&self, cpu: &mut CPU) {
+    fn php(&self, cpu: &mut CPU) {
          
     }
     
@@ -697,16 +754,68 @@ impl InstructionSet {
          
     }
 
-    // TODO Instruction: Rotate Left
+    // Instruction: Rotate Left
     fn rol(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
-         
+        if 0x2a == cpu.mem_read(cpu.reg_pc) {
+            let mut data = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu) as u8;
+            let carry = cpu.reg_status.contains(StatusFlags::CARRY);
+            cpu.set_status_flags(data >> 7 == 1, StatusFlags::CARRY);
+            data = data << 1;
+            
+            if carry {
+                data = data | 1;
+            }
+
+            cpu.reg_acc = data;
+            cpu.set_status_flags(cpu.reg_acc == 0, StatusFlags::ZERO);
+            cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
+        } else {
+            let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+            let mut data = cpu.mem_read(address);
+            let carry = cpu.reg_status.contains(StatusFlags::CARRY);
+            cpu.set_status_flags(data >> 7 == 1, StatusFlags::CARRY);
+            data = data << 1;
+            
+            if carry {
+                data = data | 1;
+            }
+            
+            cpu.mem_write(address, data);
+            cpu.set_status_flags(data == 0, StatusFlags::ZERO);
+            cpu.set_status_flags((data & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
+        }
     }
 
-    // TODO Instruction: Rotate Right
-	fn ror(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
-         
+    // Instruction: Rotate Right
+    fn ror(&self, cpu: &mut CPU) {
+        if 0x6a == cpu.mem_read(cpu.reg_pc) {
+            let mut data = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu) as u8;
+            let carry = cpu.reg_status.contains(StatusFlags::CARRY);
+            cpu.set_status_flags(data & 1 == 1, StatusFlags::CARRY);
+            data = data >> 1;
+            
+            if carry {
+                data = data | 0b10000000;
+            }
+
+            cpu.reg_acc = data;
+            cpu.set_status_flags(cpu.reg_acc == 0, StatusFlags::ZERO);
+            cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
+        } else {
+            let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+            let mut data = cpu.mem_read(address);
+            let carry = cpu.reg_status.contains(StatusFlags::CARRY);
+            cpu.set_status_flags(data & 1 == 1, StatusFlags::CARRY);
+            data = data >> 1;
+            
+            if carry {
+                data = data | 0b10000000;
+            }
+            
+            cpu.mem_write(address, data);
+            cpu.set_status_flags(data == 0, StatusFlags::ZERO);
+            cpu.set_status_flags((data & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
+        }
     }
 
     // TODO Instruction: Return from Interrupt
@@ -721,12 +830,13 @@ impl InstructionSet {
 
     // TODO Instruction: Subtract with Carry
     fn sbc(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
-         
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        let data = cpu.mem_read(address);
+        cpu.reg_acc = (data as i8).wrapping_neg().wrapping_sub(1) as u8;
     }
 
     // Instruction: Set Carry Flag
-	fn sec(&self, cpu: &mut CPU) {
+    fn sec(&self, cpu: &mut CPU) {
         cpu.reg_status.insert(StatusFlags::CARRY);
     }
 
@@ -742,19 +852,19 @@ impl InstructionSet {
 
     // Instruction: Store Accumulator
     fn sta(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
         cpu.mem_write(address, cpu.reg_acc);
     }
 
     // Instruction: Store X Register
-	fn stx(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
+    fn stx(&self, cpu: &mut CPU) {
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
         cpu.mem_write(address, cpu.reg_x);
     }
 
     // Instruction: Store Y Register
     fn sty(&self, cpu: &mut CPU) {
-        let address = self.call_addrmode(cpu.memory[cpu.reg_pc as usize])(cpu);
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
         cpu.mem_write(address, cpu.reg_y);
     }
 
@@ -775,7 +885,7 @@ impl InstructionSet {
     }
 
     // TODO Instruction: Transfer Stack Pointer to X
-	fn tsx(&self, cpu: &mut CPU) {
+    fn tsx(&self, cpu: &mut CPU) {
          
     }
 
@@ -803,5 +913,5 @@ impl InstructionSet {
     // Added Instruction to fill the Opcode Matrix; does not exist in the real NES instruction set
     // Effectively does nothing but does nothing better than NOP
     // According to OLC not all NOPs are similar so this opcode exist as a true NOP
-    fn xxx(&self, cpu: &mut CPU) {}
+    fn xxx(&self, _cpu: &mut CPU) {}
 }

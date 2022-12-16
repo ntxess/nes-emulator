@@ -21,7 +21,7 @@ pub struct CPU {
     pub reg_x:         u8,
     pub reg_y:         u8,
     pub reg_status:    StatusFlags,
-    pub memory:       [u8; 0xFFFF],
+    memory:           [u8; 0xFFFF],
 }
 
 impl CPU {
@@ -93,8 +93,7 @@ impl CPU {
         let matrix = InstructionSet::new();
 
         while (self.reg_pc as usize) < self.memory.len() {
-            matrix.call_opcode(self.memory[self.reg_pc as usize])(&matrix, self);
-            //matrix.get_cycle(self.memory[self.reg_pc as usize] as usize);
+            matrix.call_opcode(self.mem_read(self.reg_pc))(&matrix, self);
             self.reg_pc += 1;
         }
     }
@@ -128,15 +127,16 @@ mod tests {
 
         cpu.load_and_run(vec![0xa9, 0xff, 0x00]);
         assert!(cpu.reg_status.bits() & 0b1000_0000 == 0b1000_0000);
-
     }
 
     #[test]
     fn test_0xaa_tax_move_a_to_x() {
         let mut cpu = CPU::new();
 
+        cpu.load(vec![0xaa, 0x00]);
+        cpu.reset();
         cpu.reg_acc = 10;
-        cpu.load_and_run(vec![0xaa, 0x00]);
+        cpu.run();
         assert_eq!(cpu.reg_x, 10)
     }
 
@@ -154,7 +154,6 @@ mod tests {
 
         cpu.reg_x = 0xff;
         cpu.load_and_run(vec![0xe8, 0xe8, 0x00]);
-
         assert_eq!(cpu.reg_x, 1)
     }
 
