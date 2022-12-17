@@ -14,12 +14,15 @@ bitflags! {
     }
 }
 
+const STACK: u16 = 0x0100;
+const STACK_RESET: u8 = 0xfd;
+
 pub struct CPU {
     pub reg_pc:        u16,
-    pub reg_stack_ptr: u8,
     pub reg_acc:       u8,
     pub reg_x:         u8,
     pub reg_y:         u8,
+    pub reg_stack_ptr: u8,
     pub reg_status:    StatusFlags,
     memory:           [u8; 0xFFFF],
 }
@@ -28,10 +31,10 @@ impl CPU {
     pub fn new() -> Self {
         CPU {
             reg_pc:        0x0000,
-            reg_stack_ptr: 0x00,
             reg_acc:       0x00,
             reg_x:         0x00,
             reg_y:         0x00,
+            reg_stack_ptr: 0x00,
             reg_status:    StatusFlags::from_bits_truncate(0b100100),
             memory:       [0; 0xFFFF],
         }
@@ -45,7 +48,11 @@ impl CPU {
         }
     }
 
-    // Auxiliary Function
+    pub fn store_bitflags(&mut self, data: u8) {
+        self.reg_status.bits = data;
+    }
+
+    // Auxiliary Function referenced from nes_ebook by bugzmanov
     pub fn mem_read(&self, addr: u16) -> u8 {
         self.memory[addr as usize]
     }
@@ -67,9 +74,35 @@ impl CPU {
         self.mem_write(pos + 1, hi);
     }
 
+    pub fn stack_pop(&mut self) -> u8 {
+        self.reg_stack_ptr = self.reg_stack_ptr.wrapping_add(1);
+        self.mem_read((STACK as u16) + self.reg_stack_ptr as u16)
+    }
+
+    pub fn stack_push(&mut self, data: u8) {
+        self.mem_write((STACK as u16) + self.reg_stack_ptr as u16, data);
+        self.reg_stack_ptr = self.reg_stack_ptr.wrapping_sub(1)
+    }
+
+    pub fn stack_pop_u16(&mut self) -> u16 {
+        let lo = self.stack_pop() as u16;
+        let hi = self.stack_pop() as u16;
+
+        hi << 8 | lo
+    }
+
+    pub fn stack_push_u16(&mut self, data: u16) {
+        let hi = (data >> 8) as u8;
+        let lo = (data & 0xff) as u8;
+        self.stack_push(hi);
+        self.stack_push(lo);
+    }
+
     pub fn reset(&mut self) {
         self.reg_acc = 0;
         self.reg_x = 0;
+        self.reg_y = 0;
+        self.reg_stack_ptr = STACK_RESET;
         self.reg_status = StatusFlags::from_bits_truncate(0b100100);
 
         // Reset program counter to the start of program ROM
@@ -78,6 +111,7 @@ impl CPU {
     
     pub fn load_and_run(&mut self, program: Vec<u8>) {
         self.load(program);
+        self.reset();
         self.run();
     }
 
@@ -85,16 +119,33 @@ impl CPU {
         // Memory location [0x8000 .. 0xFFFF] is reserved for program ROM
         // Copy program ROM into NES memory starting from position 0x8000
         // Write reference of the start of program ROM to NES memory position 0xFFFC
-        self.memory[0x8000 .. (0x8000 + program.len())].copy_from_slice(&program[..]);
-        self.mem_write_u16(0xFFFC, 0x8000);
+        self.memory[0x0600..(0x0600 + program.len())].copy_from_slice(&program[..]);
+        self.mem_write_u16(0xFFFC, 0x0600);
     }
 
+    // pub fn run(&mut self) {
+    //     let matrix = InstructionSet::new();
+
+    //     while (self.reg_pc as usize) < self.memory.len() {
+    //         matrix.call_opcode(self.mem_read(self.reg_pc))(&matrix, self);
+    //         self.reg_pc += 1;
+    //     }
+    // }
+
     pub fn run(&mut self) {
+        self.run_with_callback(|_| {});
+    }
+
+    pub fn run_with_callback<F>(&mut self, mut callback: F) 
+    where 
+        F: FnMut(&mut CPU),
+    {
         let matrix = InstructionSet::new();
 
-        while (self.reg_pc as usize) < self.memory.len() {
+        loop {
             matrix.call_opcode(self.mem_read(self.reg_pc))(&matrix, self);
             self.reg_pc += 1;
+            callback(self);
         }
     }
 }

@@ -401,6 +401,33 @@ impl InstructionSet {
         let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
         let data = cpu.mem_read(address);
 
+        let sum = cpu.reg_acc as u16
+        + data as u16
+        + (if cpu.reg_status.contains(StatusFlags::CARRY) {
+            1
+        } else {
+            0
+        }) as u16;
+
+        let carry = sum > 0xff;
+
+        if carry {
+            cpu.reg_status.insert(StatusFlags::CARRY);
+        } else {
+            cpu.reg_status.remove(StatusFlags::CARRY);
+        }
+
+        let result = sum as u8;
+
+        if (data ^ result) & (result ^ cpu.reg_acc) & 0x80 != 0 {
+            cpu.reg_status.insert(StatusFlags::OVERFLOW);
+        } else {
+            cpu.reg_status.remove(StatusFlags::OVERFLOW)
+        }
+
+        cpu.reg_acc = result;
+        cpu.set_status_flags(cpu.reg_acc == 0, StatusFlags::ZERO);
+        cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
     // Instruction: Logic AND
@@ -505,9 +532,9 @@ impl InstructionSet {
         }
     }
 
-    // TODO Instruction: Force Interrupt
-    fn brk(&self, cpu: &mut CPU) {
-         
+    // Instruction: Force Interrupt
+    fn brk(&self, _cpu: &mut CPU) {
+        return;
     }
 
     // Instruction: Branch if Overflow Clear
@@ -663,10 +690,11 @@ impl InstructionSet {
         }
     }
 
-    // TODO Instruction: Jump to Subroutine
+    // TOFIX Instruction: Jump to Subroutine
     fn jsr(&self, cpu: &mut CPU) {
-        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
-        
+        cpu.stack_push_u16(cpu.reg_pc + 2 - 1);
+        let target_address = cpu.mem_read_u16(cpu.reg_pc);
+        cpu.reg_pc = target_address
     }
 
     // Instruction: Load Accumulator
@@ -734,24 +762,33 @@ impl InstructionSet {
         cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // TODO Instruction: Push Accumulator
+    // Instruction: Push Accumulator
     fn pha(&self, cpu: &mut CPU) {
-         
+        cpu.stack_push(cpu.reg_acc);
     }
 
-    // TODO Instruction: Push Processor Status
+    // TOFIX Instruction: Push Processor Status
     fn php(&self, cpu: &mut CPU) {
-         
+        let mut flags = cpu.reg_status.clone();
+        flags.insert(StatusFlags::BREAK);
+        flags.insert(StatusFlags::UNUSED);
+        cpu.stack_push(flags.bits());
     }
     
-    // TODO Instruction: Pull Accumulator
+    // Instruction: Pull Accumulator
     fn pla(&self, cpu: &mut CPU) {
-         
+        cpu.reg_acc = cpu.stack_pop();
+
+        cpu.set_status_flags(cpu.reg_acc == 0, StatusFlags::ZERO);
+        cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // TODO Instruction: Pull Processor Status
+    // TOFIX Instruction: Pull Processor Status
     fn plp(&self, cpu: &mut CPU) {
-         
+        let data = cpu.stack_pop();
+        cpu.store_bitflags(data);
+        cpu.reg_status.remove(StatusFlags::BREAK);
+        cpu.reg_status.insert(StatusFlags::UNUSED);
     }
 
     // Instruction: Rotate Left
@@ -818,21 +855,54 @@ impl InstructionSet {
         }
     }
 
-    // TODO Instruction: Return from Interrupt
+    // Instruction: Return from Interrupt
     fn rti(&self, cpu: &mut CPU) {
-         
+        let data = cpu.stack_pop();
+        cpu.store_bitflags(data);
+        cpu.reg_status.remove(StatusFlags::BREAK);
+        cpu.reg_status.insert(StatusFlags::UNUSED);
+
+        cpu.reg_pc = cpu.stack_pop_u16();
     }
 
-    // TODO Instruction: Return from Subroutine
+    // Instruction: Return from Subroutine
     fn rts(&self, cpu: &mut CPU) {
-         
+        cpu.reg_pc = cpu.stack_pop_u16() + 1;
     }
 
     // TODO Instruction: Subtract with Carry
     fn sbc(&self, cpu: &mut CPU) {
         let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
-        let data = cpu.mem_read(address);
-        cpu.reg_acc = (data as i8).wrapping_neg().wrapping_sub(1) as u8;
+        let mut data = cpu.mem_read(address);
+        data = (data as i8).wrapping_neg().wrapping_sub(1) as u8;
+
+        let sum = cpu.reg_acc as u16
+        + data as u16
+        + (if cpu.reg_status.contains(StatusFlags::CARRY) {
+            1
+        } else {
+            0
+        }) as u16;
+
+        let carry = sum > 0xff;
+
+        if carry {
+            cpu.reg_status.insert(StatusFlags::CARRY);
+        } else {
+            cpu.reg_status.remove(StatusFlags::CARRY);
+        }
+
+        let result = sum as u8;
+
+        if (data ^ result) & (result ^ cpu.reg_acc) & 0x80 != 0 {
+            cpu.reg_status.insert(StatusFlags::OVERFLOW);
+        } else {
+            cpu.reg_status.remove(StatusFlags::OVERFLOW)
+        }
+
+        cpu.reg_acc = result;
+        cpu.set_status_flags(cpu.reg_acc == 0, StatusFlags::ZERO);
+        cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
     // Instruction: Set Carry Flag
@@ -884,9 +954,12 @@ impl InstructionSet {
         cpu.set_status_flags((cpu.reg_y & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // TODO Instruction: Transfer Stack Pointer to X
+    // Instruction: Transfer Stack Pointer to X
     fn tsx(&self, cpu: &mut CPU) {
-         
+        cpu.reg_x = cpu.reg_stack_ptr;
+
+        cpu.set_status_flags(cpu.reg_x == 0, StatusFlags::ZERO);
+        cpu.set_status_flags((cpu.reg_x & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
     // Instruction: Transfer X to Accumulator
@@ -897,9 +970,9 @@ impl InstructionSet {
         cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // TODO Instruction: Transfer X to Stack Pointer
+    // Instruction: Transfer X to Stack Pointer
     fn txs(&self, cpu: &mut CPU) {
-         
+        cpu.reg_stack_ptr = cpu.reg_x;
     }
 
     // Instruction: Transfer Y to Accumulator
