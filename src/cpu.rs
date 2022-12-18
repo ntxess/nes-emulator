@@ -106,7 +106,6 @@ impl CPU {
 
         // Reset program counter to the start of program ROM
         self.reg_pc = self.mem_read_u16(0xFFFC);
-        println!("OUTSIDE PC [{}]", self.reg_pc);
     }
     
     pub fn load_and_run(&mut self, program: Vec<u8>) {
@@ -132,7 +131,6 @@ impl CPU {
     F: FnMut(&mut CPU),
     {
         let matrix = InstructionSet::new();
-        println!("INIT PC [{}]", self.reg_pc);
         
         while self.mem_read(self.reg_pc) != 0x00 {
             let code = self.mem_read(self.reg_pc);
