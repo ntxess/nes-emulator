@@ -1,5 +1,4 @@
 use crate::opcodes::InstructionSet;
-use bitflags::bitflags;
 
 bitflags! {
     pub struct StatusFlags: u8 {
@@ -30,11 +29,11 @@ pub struct CPU {
 impl CPU {
     pub fn new() -> Self {
         CPU {
-            reg_pc:        0x0000,
-            reg_acc:       0x00,
-            reg_x:         0x00,
-            reg_y:         0x00,
-            reg_stack_ptr: 0x00,
+            reg_pc:        0,
+            reg_acc:       0,
+            reg_x:         0,
+            reg_y:         0,
+            reg_stack_ptr: STACK_RESET,
             reg_status:    StatusFlags::from_bits_truncate(0b100100),
             memory:       [0; 0xFFFF],
         }
@@ -81,7 +80,7 @@ impl CPU {
 
     pub fn stack_push(&mut self, data: u8) {
         self.mem_write((STACK as u16) + self.reg_stack_ptr as u16, data);
-        self.reg_stack_ptr = self.reg_stack_ptr.wrapping_sub(1)
+        self.reg_stack_ptr = self.reg_stack_ptr.wrapping_sub(1);
     }
 
     pub fn stack_pop_u16(&mut self) -> u16 {
@@ -123,29 +122,30 @@ impl CPU {
         self.mem_write_u16(0xFFFC, 0x0600);
     }
 
-    // pub fn run(&mut self) {
-    //     let matrix = InstructionSet::new();
-
-    //     while (self.reg_pc as usize) < self.memory.len() {
-    //         matrix.call_opcode(self.mem_read(self.reg_pc))(&matrix, self);
-    //         self.reg_pc += 1;
-    //     }
-    // }
-
     pub fn run(&mut self) {
         self.run_with_callback(|_| {});
     }
-
+    
     pub fn run_with_callback<F>(&mut self, mut callback: F) 
     where 
-        F: FnMut(&mut CPU),
+    F: FnMut(&mut CPU),
     {
         let matrix = InstructionSet::new();
-
+        
         loop {
             matrix.call_opcode(self.mem_read(self.reg_pc))(&matrix, self);
             self.reg_pc += 1;
             callback(self);
+        }
+    }
+
+    pub fn load_run_test(&mut self, program: Vec<u8>) {
+        self.load(program);
+        let matrix = InstructionSet::new();
+
+        while (self.reg_pc as usize) < self.memory.len() - 2{
+            matrix.call_opcode(self.mem_read(self.reg_pc))(&matrix, self);
+            self.reg_pc += 1;
         }
     }
 }
@@ -157,54 +157,35 @@ mod tests {
     #[test]
     fn test_0xa9_lda_immidiate_load_data() {
         let mut cpu = CPU::new();
-
-        cpu.load_and_run(vec![0xa9, 0x05, 0x00]);
+        cpu.load_run_test(vec![0xa9, 0x05, 0x00]);
         assert_eq!(cpu.reg_acc, 5);
-        assert!(cpu.reg_status.bits() & 0b0000_0010 == 0);
+        assert!(cpu.reg_status.bits() & 0b0000_0010 == 0b00);
         assert!(cpu.reg_status.bits() & 0b1000_0000 == 0);
-    }
-
-    #[test]
-    fn test_0xa9_lda_zero_flag() {
-        let mut cpu = CPU::new();
-
-        cpu.load_and_run(vec![0xa9, 0x00, 0x00]);
-        assert!(cpu.reg_status.bits() & 0b0000_0010 == 0b10);
-    }
-    
-    #[test]
-    fn test_0xa9_lda_negative_flag() {
-        let mut cpu = CPU::new();
-
-        cpu.load_and_run(vec![0xa9, 0xff, 0x00]);
-        assert!(cpu.reg_status.bits() & 0b1000_0000 == 0b1000_0000);
     }
 
     #[test]
     fn test_0xaa_tax_move_a_to_x() {
         let mut cpu = CPU::new();
-
-        cpu.load(vec![0xaa, 0x00]);
-        cpu.reset();
         cpu.reg_acc = 10;
-        cpu.run();
+        cpu.load_run_test(vec![0xaa, 0x00]);
+
         assert_eq!(cpu.reg_x, 10)
     }
 
     #[test]
     fn test_5_ops_working_together() {
         let mut cpu = CPU::new();
+        cpu.load_run_test(vec![0xa9, 0xc0, 0xaa, 0xe8, 0x00]);
 
-        cpu.load_and_run(vec![0xa9, 0xc0, 0xaa, 0xe8, 0x00]);
         assert_eq!(cpu.reg_x, 0xc1)
     }
 
     #[test]
     fn test_inx_overflow() {
         let mut cpu = CPU::new();
-
         cpu.reg_x = 0xff;
-        cpu.load_and_run(vec![0xe8, 0xe8, 0x00]);
+        cpu.load_run_test(vec![0xe8, 0xe8, 0x00]);
+
         assert_eq!(cpu.reg_x, 1)
     }
 
@@ -213,7 +194,8 @@ mod tests {
         let mut cpu = CPU::new();
         cpu.mem_write(0x10, 0x55);
 
-        cpu.load_and_run(vec![0xa5, 0x10, 0x00]);
+        cpu.load_run_test(vec![0xa5, 0x10, 0x00]);
+
         assert_eq!(cpu.reg_acc, 0x55);
     }
 }

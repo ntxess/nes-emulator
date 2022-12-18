@@ -3,16 +3,12 @@ pub mod opcodes;
 
 use cpu::CPU;
 use rand::Rng;
-
 use sdl2::event::Event;
 use sdl2::EventPump;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::pixels::PixelFormatEnum;
 use std::time::Duration;
-
-#[macro_use]
-extern crate lazy_static;
 
 #[macro_use]
 extern crate bitflags;

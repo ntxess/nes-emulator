@@ -42,7 +42,6 @@ name = "nes-emulator"
 version = "0.1.0"
 dependencies = [
  "bitflags",
- "lazy_static",
  "rand",
  "sdl2",
 ]
