@@ -345,6 +345,7 @@ impl InstructionSet {
         cpu.reg_pc += 1;
 
         let address = cpu.mem_read_u16(cpu.reg_pc);
+        cpu.reg_pc += 1;
         address
     }
 
@@ -354,6 +355,7 @@ impl InstructionSet {
 
         let base = cpu.mem_read_u16(cpu.reg_pc);
         let address = base.wrapping_add(cpu.reg_x as u16);
+        cpu.reg_pc += 1;
         address
     }
 
@@ -363,6 +365,7 @@ impl InstructionSet {
 
         let base = cpu.mem_read_u16(cpu.reg_pc);
         let address = base.wrapping_add(cpu.reg_y as u16);
+        cpu.reg_pc += 1;
         address
     }	
 
@@ -371,6 +374,7 @@ impl InstructionSet {
         cpu.reg_pc += 1;
 
         let address = cpu.mem_read_u16(cpu.reg_pc);
+        cpu.reg_pc += 1;
         address
     }
 
@@ -466,31 +470,67 @@ impl InstructionSet {
 
     // Instruction: Branch if Carry Clear
     fn bcc(&self, cpu: &mut CPU) {
-        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        // let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
 
+        // if !cpu.reg_status.contains(StatusFlags::CARRY) {
+        //     let jump_addr = cpu.mem_read(address) as i8;
+        //     cpu.reg_pc = cpu.reg_pc.wrapping_add(1).wrapping_add(jump_addr as u16);
+        // }
+
+        cpu.reg_pc += 1;
         if !cpu.reg_status.contains(StatusFlags::CARRY) {
-            let jump_addr = cpu.mem_read(address) as i8;
-            cpu.reg_pc = cpu.reg_pc.wrapping_add(1).wrapping_add(jump_addr as u16);
+            let jump: i8 = cpu.mem_read(cpu.reg_pc) as i8;
+            let jump_addr = cpu
+                .reg_pc
+                .wrapping_add(1)
+                .wrapping_add(jump as u16);
+
+            cpu.reg_pc = jump_addr;
+            cpu.reg_pc -= 1;
         }
     }
 
     // Instruction: Branch if Carry Set
     fn bcs(&self, cpu: &mut CPU) {
-        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        // let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
 
+        // if cpu.reg_status.contains(StatusFlags::CARRY) {
+        //     let jump_addr = cpu.mem_read(address) as i8;
+        //     cpu.reg_pc = cpu.reg_pc.wrapping_add(1).wrapping_add(jump_addr as u16);
+        // }
+
+        cpu.reg_pc += 1;
         if cpu.reg_status.contains(StatusFlags::CARRY) {
-            let jump_addr = cpu.mem_read(address) as i8;
-            cpu.reg_pc = cpu.reg_pc.wrapping_add(1).wrapping_add(jump_addr as u16);
+            let jump: i8 = cpu.mem_read(cpu.reg_pc) as i8;
+            let jump_addr = cpu
+                .reg_pc
+                .wrapping_add(1)
+                .wrapping_add(jump as u16);
+
+            cpu.reg_pc = jump_addr;
+            cpu.reg_pc -= 1;
         }
     }
 
     // Instruction: Branch if Equal
     fn beq(&self, cpu: &mut CPU) {
-        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        // let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
 
+        // if cpu.reg_status.contains(StatusFlags::ZERO) {
+        //     let jump_addr = cpu.mem_read(address) as i8;
+        //     cpu.reg_pc = cpu.reg_pc.wrapping_add(1).wrapping_add(jump_addr as u16);
+        // }
+
+        cpu.reg_pc += 1;
         if cpu.reg_status.contains(StatusFlags::ZERO) {
-            let jump_addr = cpu.mem_read(address) as i8;
-            cpu.reg_pc = cpu.reg_pc.wrapping_add(1).wrapping_add(jump_addr as u16);
+            let jump: i8 = cpu.mem_read(cpu.reg_pc) as i8;
+            let jump_addr = cpu
+                .reg_pc
+                .wrapping_add(1)
+                .wrapping_add(jump as u16);
+
+            cpu.reg_pc = jump_addr;
+            cpu.reg_pc -= 1;
         }
     }
 
@@ -506,31 +546,67 @@ impl InstructionSet {
 
     // Instruction: Branch if Minus
     fn bmi(&self, cpu: &mut CPU) {
-        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        // let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
 
+        // if cpu.reg_status.contains(StatusFlags::NEGATIVE) {
+        //     let jump_addr = cpu.mem_read(address) as i8;
+        //     cpu.reg_pc = cpu.reg_pc.wrapping_add(1).wrapping_add(jump_addr as u16);
+        // }
+
+        cpu.reg_pc += 1;
         if cpu.reg_status.contains(StatusFlags::NEGATIVE) {
-            let jump_addr = cpu.mem_read(address) as i8;
-            cpu.reg_pc = cpu.reg_pc.wrapping_add(1).wrapping_add(jump_addr as u16);
+            let jump: i8 = cpu.mem_read(cpu.reg_pc) as i8;
+            let jump_addr = cpu
+                .reg_pc
+                .wrapping_add(1)
+                .wrapping_add(jump as u16);
+
+            cpu.reg_pc = jump_addr;
+            cpu.reg_pc -= 1;
         }
     }
 
     // Instruction: Branch if Not Equal
     fn bne(&self, cpu: &mut CPU) {
-        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        // let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
 
+        // if !cpu.reg_status.contains(StatusFlags::ZERO) {
+        //     let jump_addr = cpu.mem_read(address) as i8;
+        //     cpu.reg_pc = cpu.reg_pc.wrapping_add(1).wrapping_add(jump_addr as u16);
+        // }
+
+        cpu.reg_pc += 1;
         if !cpu.reg_status.contains(StatusFlags::ZERO) {
-            let jump_addr = cpu.mem_read(address) as i8;
-            cpu.reg_pc = cpu.reg_pc.wrapping_add(1).wrapping_add(jump_addr as u16);
+            let jump: i8 = cpu.mem_read(cpu.reg_pc) as i8;
+            let jump_addr = cpu
+                .reg_pc
+                .wrapping_add(1)
+                .wrapping_add(jump as u16);
+
+            cpu.reg_pc = jump_addr;
+            cpu.reg_pc -= 1;
         }
     }
 
     // Instruction: Branch if Positive
     fn bpl(&self, cpu: &mut CPU) {
-        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        // let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
 
+        // if !cpu.reg_status.contains(StatusFlags::NEGATIVE) {
+        //     let jump_addr = cpu.mem_read(address) as i8;
+        //     cpu.reg_pc = cpu.reg_pc.wrapping_add(1).wrapping_add(jump_addr as u16);
+        // }
+
+        cpu.reg_pc += 1;
         if !cpu.reg_status.contains(StatusFlags::NEGATIVE) {
-            let jump_addr = cpu.mem_read(address) as i8;
-            cpu.reg_pc = cpu.reg_pc.wrapping_add(1).wrapping_add(jump_addr as u16);
+            let jump: i8 = cpu.mem_read(cpu.reg_pc) as i8;
+            let jump_addr = cpu
+                .reg_pc
+                .wrapping_add(1)
+                .wrapping_add(jump as u16);
+
+            cpu.reg_pc = jump_addr;
+            cpu.reg_pc -= 1;
         }
     }
 
@@ -541,21 +617,45 @@ impl InstructionSet {
 
     // Instruction: Branch if Overflow Clear
     fn bvc(&self, cpu: &mut CPU) {
-        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        // let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
 
+        // if !cpu.reg_status.contains(StatusFlags::OVERFLOW) {
+        //     let jump_addr = cpu.mem_read(address) as i8;
+        //     cpu.reg_pc = cpu.reg_pc.wrapping_add(1).wrapping_add(jump_addr as u16);
+        // }
+
+        cpu.reg_pc += 1;
         if !cpu.reg_status.contains(StatusFlags::OVERFLOW) {
-            let jump_addr = cpu.mem_read(address) as i8;
-            cpu.reg_pc = cpu.reg_pc.wrapping_add(1).wrapping_add(jump_addr as u16);
+            let jump: i8 = cpu.mem_read(cpu.reg_pc) as i8;
+            let jump_addr = cpu
+                .reg_pc
+                .wrapping_add(1)
+                .wrapping_add(jump as u16);
+
+            cpu.reg_pc = jump_addr;
+            cpu.reg_pc -= 1;
         }
     }
 
     // Instruction: Branch Carry Flag
     fn bvs(&self, cpu: &mut CPU) {
-        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        // let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
 
+        // if cpu.reg_status.contains(StatusFlags::OVERFLOW) {
+        //     let jump_addr = cpu.mem_read(address) as i8;
+        //     cpu.reg_pc = cpu.reg_pc.wrapping_add(1).wrapping_add(jump_addr as u16);     
+        // }
+
+        cpu.reg_pc += 1;
         if cpu.reg_status.contains(StatusFlags::OVERFLOW) {
-            let jump_addr = cpu.mem_read(address) as i8;
-            cpu.reg_pc = cpu.reg_pc.wrapping_add(1).wrapping_add(jump_addr as u16);     
+            let jump: i8 = cpu.mem_read(cpu.reg_pc) as i8;
+            let jump_addr = cpu
+                .reg_pc
+                .wrapping_add(1)
+                .wrapping_add(jump as u16);
+
+            cpu.reg_pc = jump_addr;
+            cpu.reg_pc -= 1;
         }
     }
 
@@ -690,6 +790,7 @@ impl InstructionSet {
             };
             cpu.reg_pc = indirect_ref;
         }
+        cpu.reg_pc -= 1;
     }
 
     // Instruction: Jump to Subroutine
@@ -701,6 +802,7 @@ impl InstructionSet {
         cpu.stack_push_u16(cpu.reg_pc + 2 - 1);
         let target_address = cpu.mem_read_u16(cpu.reg_pc);
         cpu.reg_pc = target_address;
+        cpu.reg_pc -= 1;
     }
 
     // Instruction: Load Accumulator
@@ -869,11 +971,13 @@ impl InstructionSet {
         cpu.reg_status.insert(StatusFlags::UNUSED);
 
         cpu.reg_pc = cpu.stack_pop_u16();
+        cpu.reg_pc -= 1;
     }
 
     // Instruction: Return from Subroutine
     fn rts(&self, cpu: &mut CPU) {
         cpu.reg_pc = cpu.stack_pop_u16() + 1;
+        cpu.reg_pc -= 1;
     }
 
     // Instruction: Subtract with Carry

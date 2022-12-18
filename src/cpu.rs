@@ -106,6 +106,7 @@ impl CPU {
 
         // Reset program counter to the start of program ROM
         self.reg_pc = self.mem_read_u16(0xFFFC);
+        println!("OUTSIDE PC [{}]", self.reg_pc);
     }
     
     pub fn load_and_run(&mut self, program: Vec<u8>) {
@@ -131,21 +132,15 @@ impl CPU {
     F: FnMut(&mut CPU),
     {
         let matrix = InstructionSet::new();
+        println!("INIT PC [{}]", self.reg_pc);
         
-        loop {
-            matrix.call_opcode(self.mem_read(self.reg_pc))(&matrix, self);
+        while self.mem_read(self.reg_pc) != 0x00 {
+            let code = self.mem_read(self.reg_pc);
+
+            matrix.call_opcode(code)(&matrix, self);
             self.reg_pc += 1;
+
             callback(self);
-        }
-    }
-
-    pub fn load_run_test(&mut self, program: Vec<u8>) {
-        self.load(program);
-        let matrix = InstructionSet::new();
-
-        while (self.reg_pc as usize) < self.memory.len() - 2{
-            matrix.call_opcode(self.mem_read(self.reg_pc))(&matrix, self);
-            self.reg_pc += 1;
         }
     }
 }
@@ -157,7 +152,7 @@ mod tests {
     #[test]
     fn test_0xa9_lda_immidiate_load_data() {
         let mut cpu = CPU::new();
-        cpu.load_run_test(vec![0xa9, 0x05, 0x00]);
+        cpu.load_and_run(vec![0xa9, 0x05, 0x00]);
         assert_eq!(cpu.reg_acc, 5);
         assert!(cpu.reg_status.bits() & 0b0000_0010 == 0b00);
         assert!(cpu.reg_status.bits() & 0b1000_0000 == 0);
@@ -167,7 +162,7 @@ mod tests {
     fn test_0xaa_tax_move_a_to_x() {
         let mut cpu = CPU::new();
         cpu.reg_acc = 10;
-        cpu.load_run_test(vec![0xaa, 0x00]);
+        cpu.load_and_run(vec![0xaa, 0x00]);
 
         assert_eq!(cpu.reg_x, 10)
     }
@@ -175,7 +170,7 @@ mod tests {
     #[test]
     fn test_5_ops_working_together() {
         let mut cpu = CPU::new();
-        cpu.load_run_test(vec![0xa9, 0xc0, 0xaa, 0xe8, 0x00]);
+        cpu.load_and_run(vec![0xa9, 0xc0, 0xaa, 0xe8, 0x00]);
 
         assert_eq!(cpu.reg_x, 0xc1)
     }
@@ -184,7 +179,7 @@ mod tests {
     fn test_inx_overflow() {
         let mut cpu = CPU::new();
         cpu.reg_x = 0xff;
-        cpu.load_run_test(vec![0xe8, 0xe8, 0x00]);
+        cpu.load_and_run(vec![0xe8, 0xe8, 0x00]);
 
         assert_eq!(cpu.reg_x, 1)
     }
@@ -194,7 +189,7 @@ mod tests {
         let mut cpu = CPU::new();
         cpu.mem_write(0x10, 0x55);
 
-        cpu.load_run_test(vec![0xa5, 0x10, 0x00]);
+        cpu.load_and_run(vec![0xa5, 0x10, 0x00]);
 
         assert_eq!(cpu.reg_acc, 0x55);
     }
