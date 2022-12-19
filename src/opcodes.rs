@@ -1,4 +1,4 @@
-use crate::cpu::{CPU, StatusFlags};
+use crate::cpu::{CPU, StatusFlags, Mem};
 
 pub struct Instruction {
     opcode:   Box<dyn Fn(&InstructionSet, &mut CPU)>,
@@ -467,6 +467,8 @@ impl InstructionSet {
     fn bcc(&self, cpu: &mut CPU) {
         let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
 
+        // Every branching instruction requires an offset of -1 byte to the program counter in order to not skip the 
+        // next instruction
         if !cpu.reg_status.contains(StatusFlags::CARRY) {
             let jump_addr = cpu.mem_read(address) as i8;
             cpu.reg_pc = cpu.reg_pc.wrapping_add(1).wrapping_add(jump_addr as u16) - 1;
