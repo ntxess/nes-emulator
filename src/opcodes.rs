@@ -14,8 +14,11 @@ impl InstructionSet {
     pub fn new() -> Self {
         InstructionSet {
             // Massive Instruction Set Matrix from OneLoneCoder's own NEW emulator repo, Thank you!
+            // Original matrix does not support the unofficial opcodes
             // This matrix was modified from OneLoneCoder's C++ project to RUST.
             // Copyright 2018, 2019, 2020, 2021 OneLoneCoder.com
+            // Additional fix from original: Brk opcode changed from imm to imp per the NES engineering guide.
+            // Todo: add support for unofficial opcodes
             matrix: vec![
                 Instruction{opcode: Box::new(InstructionSet::brk), addrmode: Box::new(InstructionSet::imp), cycle: 7},
                 Instruction{opcode: Box::new(InstructionSet::ora), addrmode: Box::new(InstructionSet::izx), cycle: 6},
@@ -293,6 +296,7 @@ impl InstructionSet {
     // Addressing Mode: Implicit / Accumulator
     // Implicit addressing mode requires no additional logic to obtain address
     // Thus, we can use it for opcodes that require the Accumulator addressing mode as well
+    // This code call is mostly redundant but added for the sake of implementation per the NES engineering guide
     fn imp(cpu: &mut CPU) -> u16 { 
         cpu.reg_acc as u16
     }
@@ -336,6 +340,8 @@ impl InstructionSet {
     }
 
     // Addressing Mode: Absolute
+    // Absolute addressing mode and any other addressing mode that require a memory read of u16 requires an extra
+    // Program counter increment, skipping over the extra byte needed for the opcode instruction
     fn abs(cpu: &mut CPU) -> u16 {
         cpu.reg_pc += 1;
 
@@ -697,7 +703,7 @@ impl InstructionSet {
     }
 
     // Instruction: Jump to Subroutine
-    // For some reason even though JSR's addressing mode is Absolute we do not grab the address as u16
+    // For some reason even though JSR's addressing mode is Absolute we do not grab the address through the Aboslute addressing mode
     // Instead we do this:
     fn jsr(&self, cpu: &mut CPU) {     
         cpu.reg_pc += 1;
