@@ -646,7 +646,14 @@ impl InstructionSet {
 
     // Unofficial opcode
     fn dcp(&self, cpu: &mut CPU) {
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        let data = cpu.mem_read(address);
+        let result = data.wrapping_sub(1);
+        cpu.mem_write(address, result);
 
+        cpu.set_status_flags(result <= cpu.reg_acc, StatusFlags::CARRY);
+        cpu.set_status_flags(cpu.reg_acc.wrapping_sub(result) == 0, StatusFlags::ZERO);
+        cpu.set_status_flags((cpu.reg_acc.wrapping_sub(result) & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
     // Instruction: Decrement Memory
@@ -864,7 +871,7 @@ impl InstructionSet {
 
     // Unofficial opcode
     fn rla(&self, cpu: &mut CPU) {
-    
+        
     }
 
     // Instruction: Rotate Left
