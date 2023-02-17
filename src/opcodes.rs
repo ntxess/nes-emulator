@@ -12,270 +12,270 @@ pub struct InstructionSet {
 
 impl InstructionSet {
     pub fn new() -> Self {
+        println!("New Set");
         InstructionSet {
-            // Massive Instruction Set Matrix from OneLoneCoder's own NEW emulator repo, Thank you!
-            // Original matrix does not support the unofficial opcodes
-            // This matrix was modified from OneLoneCoder's C++ project to RUST.
+            // Massive Instruction Set Matrix from OneLoneCoder's own emulator repo, Thank you!
             // Copyright 2018, 2019, 2020, 2021 OneLoneCoder.com
+            // OLC's Original matrix does not support the unofficial opcodes 
+            // This matrix was modified with additions of the unofficial opcodes + address fixes
             // Additional fix from original: Brk opcode changed from imm to imp per the NES engineering guide.
-            // Todo: add support for unofficial opcodes
             matrix: vec![
                 Instruction{opcode: Box::new(InstructionSet::brk), addrmode: Box::new(InstructionSet::imp), cycle: 7},
                 Instruction{opcode: Box::new(InstructionSet::ora), addrmode: Box::new(InstructionSet::izx), cycle: 6},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 8},
-                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 3},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
+                Instruction{opcode: Box::new(InstructionSet::slo), addrmode: Box::new(InstructionSet::izx), cycle: 8},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::zp0), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::ora), addrmode: Box::new(InstructionSet::zp0), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::asl), addrmode: Box::new(InstructionSet::zp0), cycle: 5},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 5},
+                Instruction{opcode: Box::new(InstructionSet::slo), addrmode: Box::new(InstructionSet::zp0), cycle: 5},
                 Instruction{opcode: Box::new(InstructionSet::php), addrmode: Box::new(InstructionSet::imp), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::ora), addrmode: Box::new(InstructionSet::imm), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::asl), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 4},
+                Instruction{opcode: Box::new(InstructionSet::anc), addrmode: Box::new(InstructionSet::imm), cycle: 2},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::abs), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::ora), addrmode: Box::new(InstructionSet::abs), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::asl), addrmode: Box::new(InstructionSet::abs), cycle: 6},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 6},
+                Instruction{opcode: Box::new(InstructionSet::slo), addrmode: Box::new(InstructionSet::abs), cycle: 6},
                 Instruction{opcode: Box::new(InstructionSet::bpl), addrmode: Box::new(InstructionSet::rel), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::ora), addrmode: Box::new(InstructionSet::izy), cycle: 5},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 8},
-                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 4},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
+                Instruction{opcode: Box::new(InstructionSet::slo), addrmode: Box::new(InstructionSet::izy), cycle: 8},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::zpx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::ora), addrmode: Box::new(InstructionSet::zpx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::asl), addrmode: Box::new(InstructionSet::zpx), cycle: 6},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 6},
+                Instruction{opcode: Box::new(InstructionSet::slo), addrmode: Box::new(InstructionSet::zpx), cycle: 6},
                 Instruction{opcode: Box::new(InstructionSet::clc), addrmode: Box::new(InstructionSet::imp), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::ora), addrmode: Box::new(InstructionSet::aby), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 7},
-                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 4},
+                Instruction{opcode: Box::new(InstructionSet::slo), addrmode: Box::new(InstructionSet::aby), cycle: 7},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::abx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::ora), addrmode: Box::new(InstructionSet::abx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::asl), addrmode: Box::new(InstructionSet::abx), cycle: 7},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 7},
+                Instruction{opcode: Box::new(InstructionSet::slo), addrmode: Box::new(InstructionSet::abx), cycle: 7},
                 Instruction{opcode: Box::new(InstructionSet::jsr), addrmode: Box::new(InstructionSet::abs), cycle: 6},
                 Instruction{opcode: Box::new(InstructionSet::and), addrmode: Box::new(InstructionSet::izx), cycle: 6},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 8},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
+                Instruction{opcode: Box::new(InstructionSet::rla), addrmode: Box::new(InstructionSet::izx), cycle: 8},
                 Instruction{opcode: Box::new(InstructionSet::bit), addrmode: Box::new(InstructionSet::zp0), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::and), addrmode: Box::new(InstructionSet::zp0), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::rol), addrmode: Box::new(InstructionSet::zp0), cycle: 5},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 5},
+                Instruction{opcode: Box::new(InstructionSet::rla), addrmode: Box::new(InstructionSet::zp0), cycle: 5},
                 Instruction{opcode: Box::new(InstructionSet::plp), addrmode: Box::new(InstructionSet::imp), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::and), addrmode: Box::new(InstructionSet::imm), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::rol), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 2},
+                Instruction{opcode: Box::new(InstructionSet::anc), addrmode: Box::new(InstructionSet::imm), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::bit), addrmode: Box::new(InstructionSet::abs), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::and), addrmode: Box::new(InstructionSet::abs), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::rol), addrmode: Box::new(InstructionSet::abs), cycle: 6},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 6},
+                Instruction{opcode: Box::new(InstructionSet::rla), addrmode: Box::new(InstructionSet::abs), cycle: 6},
                 Instruction{opcode: Box::new(InstructionSet::bmi), addrmode: Box::new(InstructionSet::rel), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::and), addrmode: Box::new(InstructionSet::izy), cycle: 5},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 8},
-                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 4},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
+                Instruction{opcode: Box::new(InstructionSet::rla), addrmode: Box::new(InstructionSet::izy), cycle: 8},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::zpx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::and), addrmode: Box::new(InstructionSet::zpx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::rol), addrmode: Box::new(InstructionSet::zpx), cycle: 6},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 6},
+                Instruction{opcode: Box::new(InstructionSet::rla), addrmode: Box::new(InstructionSet::zpx), cycle: 6},
                 Instruction{opcode: Box::new(InstructionSet::sec), addrmode: Box::new(InstructionSet::imp), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::and), addrmode: Box::new(InstructionSet::aby), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 7},
-                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 4},
+                Instruction{opcode: Box::new(InstructionSet::rla), addrmode: Box::new(InstructionSet::aby), cycle: 7},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::abx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::and), addrmode: Box::new(InstructionSet::abx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::rol), addrmode: Box::new(InstructionSet::abx), cycle: 7},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 7},
+                Instruction{opcode: Box::new(InstructionSet::rla), addrmode: Box::new(InstructionSet::abx), cycle: 7},
                 Instruction{opcode: Box::new(InstructionSet::rti), addrmode: Box::new(InstructionSet::imp), cycle: 6},
                 Instruction{opcode: Box::new(InstructionSet::eor), addrmode: Box::new(InstructionSet::izx), cycle: 6},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 8},
-                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 3},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
+                Instruction{opcode: Box::new(InstructionSet::sre), addrmode: Box::new(InstructionSet::izx), cycle: 8},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::zp0), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::eor), addrmode: Box::new(InstructionSet::zp0), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::lsr), addrmode: Box::new(InstructionSet::zp0), cycle: 5},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 5},
+                Instruction{opcode: Box::new(InstructionSet::sre), addrmode: Box::new(InstructionSet::zp0), cycle: 5},
                 Instruction{opcode: Box::new(InstructionSet::pha), addrmode: Box::new(InstructionSet::imp), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::eor), addrmode: Box::new(InstructionSet::imm), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::lsr), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 2},
+                Instruction{opcode: Box::new(InstructionSet::alr), addrmode: Box::new(InstructionSet::imm), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::jmp), addrmode: Box::new(InstructionSet::abs), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::eor), addrmode: Box::new(InstructionSet::abs), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::lsr), addrmode: Box::new(InstructionSet::abs), cycle: 6},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 6},
+                Instruction{opcode: Box::new(InstructionSet::sre), addrmode: Box::new(InstructionSet::abs), cycle: 6},
                 Instruction{opcode: Box::new(InstructionSet::bvc), addrmode: Box::new(InstructionSet::rel), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::eor), addrmode: Box::new(InstructionSet::izy), cycle: 5},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 8},
-                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 4},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
+                Instruction{opcode: Box::new(InstructionSet::sre), addrmode: Box::new(InstructionSet::izy), cycle: 8},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::zpx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::eor), addrmode: Box::new(InstructionSet::zpx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::lsr), addrmode: Box::new(InstructionSet::zpx), cycle: 6},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 6},
+                Instruction{opcode: Box::new(InstructionSet::sre), addrmode: Box::new(InstructionSet::zpx), cycle: 6},
                 Instruction{opcode: Box::new(InstructionSet::cli), addrmode: Box::new(InstructionSet::imp), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::eor), addrmode: Box::new(InstructionSet::aby), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 7},
-                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 4},
+                Instruction{opcode: Box::new(InstructionSet::sre), addrmode: Box::new(InstructionSet::aby), cycle: 7},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::abx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::eor), addrmode: Box::new(InstructionSet::abx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::lsr), addrmode: Box::new(InstructionSet::abx), cycle: 7},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 7},
+                Instruction{opcode: Box::new(InstructionSet::sre), addrmode: Box::new(InstructionSet::abx), cycle: 7},
                 Instruction{opcode: Box::new(InstructionSet::rts), addrmode: Box::new(InstructionSet::imp), cycle: 6},
                 Instruction{opcode: Box::new(InstructionSet::adc), addrmode: Box::new(InstructionSet::izx), cycle: 6},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 8},
-                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 3},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
+                Instruction{opcode: Box::new(InstructionSet::rra), addrmode: Box::new(InstructionSet::izx), cycle: 8},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::zp0), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::adc), addrmode: Box::new(InstructionSet::zp0), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::ror), addrmode: Box::new(InstructionSet::zp0), cycle: 5},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 5},
+                Instruction{opcode: Box::new(InstructionSet::rra), addrmode: Box::new(InstructionSet::zp0), cycle: 5},
                 Instruction{opcode: Box::new(InstructionSet::pla), addrmode: Box::new(InstructionSet::imp), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::adc), addrmode: Box::new(InstructionSet::imm), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::ror), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 2},
+                Instruction{opcode: Box::new(InstructionSet::arr), addrmode: Box::new(InstructionSet::imm), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::jmp), addrmode: Box::new(InstructionSet::ind), cycle: 5},
                 Instruction{opcode: Box::new(InstructionSet::adc), addrmode: Box::new(InstructionSet::abs), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::ror), addrmode: Box::new(InstructionSet::abs), cycle: 6},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 6},
+                Instruction{opcode: Box::new(InstructionSet::rra), addrmode: Box::new(InstructionSet::abs), cycle: 6},
                 Instruction{opcode: Box::new(InstructionSet::bvs), addrmode: Box::new(InstructionSet::rel), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::adc), addrmode: Box::new(InstructionSet::izy), cycle: 5},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 8},
-                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 4},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
+                Instruction{opcode: Box::new(InstructionSet::rra), addrmode: Box::new(InstructionSet::izy), cycle: 8},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::zpx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::adc), addrmode: Box::new(InstructionSet::zpx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::ror), addrmode: Box::new(InstructionSet::zpx), cycle: 6},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 6},
+                Instruction{opcode: Box::new(InstructionSet::rra), addrmode: Box::new(InstructionSet::zpx), cycle: 6},
                 Instruction{opcode: Box::new(InstructionSet::sei), addrmode: Box::new(InstructionSet::imp), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::adc), addrmode: Box::new(InstructionSet::aby), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 7},
-                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 4},
+                Instruction{opcode: Box::new(InstructionSet::rra), addrmode: Box::new(InstructionSet::aby), cycle: 7},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::abx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::adc), addrmode: Box::new(InstructionSet::abx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::ror), addrmode: Box::new(InstructionSet::abx), cycle: 7},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 7},
+                Instruction{opcode: Box::new(InstructionSet::rra), addrmode: Box::new(InstructionSet::abx), cycle: 7},
                 Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::sta), addrmode: Box::new(InstructionSet::izx), cycle: 6},
                 Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 6},
+                Instruction{opcode: Box::new(InstructionSet::sax), addrmode: Box::new(InstructionSet::izx), cycle: 6},
                 Instruction{opcode: Box::new(InstructionSet::sty), addrmode: Box::new(InstructionSet::zp0), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::sta), addrmode: Box::new(InstructionSet::zp0), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::stx), addrmode: Box::new(InstructionSet::zp0), cycle: 3},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 3},
+                Instruction{opcode: Box::new(InstructionSet::sax), addrmode: Box::new(InstructionSet::zp0), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::dey), addrmode: Box::new(InstructionSet::imp), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::txa), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 2},
+                Instruction{opcode: Box::new(InstructionSet::xaa), addrmode: Box::new(InstructionSet::imm), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::sty), addrmode: Box::new(InstructionSet::abs), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::sta), addrmode: Box::new(InstructionSet::abs), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::stx), addrmode: Box::new(InstructionSet::abs), cycle: 4},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 4},
+                Instruction{opcode: Box::new(InstructionSet::sax), addrmode: Box::new(InstructionSet::abs), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::bcc), addrmode: Box::new(InstructionSet::rel), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::sta), addrmode: Box::new(InstructionSet::izy), cycle: 6},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 6},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
+                Instruction{opcode: Box::new(InstructionSet::ahx), addrmode: Box::new(InstructionSet::izy), cycle: 8},
                 Instruction{opcode: Box::new(InstructionSet::sty), addrmode: Box::new(InstructionSet::zpx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::sta), addrmode: Box::new(InstructionSet::zpx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::stx), addrmode: Box::new(InstructionSet::zpy), cycle: 4},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 4},
+                Instruction{opcode: Box::new(InstructionSet::sax), addrmode: Box::new(InstructionSet::zpy), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::tya), addrmode: Box::new(InstructionSet::imp), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::sta), addrmode: Box::new(InstructionSet::aby), cycle: 5},
                 Instruction{opcode: Box::new(InstructionSet::txs), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 5},
-                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 5},
+                Instruction{opcode: Box::new(InstructionSet::tas), addrmode: Box::new(InstructionSet::aby), cycle: 2},
+                Instruction{opcode: Box::new(InstructionSet::shy), addrmode: Box::new(InstructionSet::abx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::sta), addrmode: Box::new(InstructionSet::abx), cycle: 5},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 5},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 5},
+                Instruction{opcode: Box::new(InstructionSet::shx), addrmode: Box::new(InstructionSet::aby), cycle: 4},
+                Instruction{opcode: Box::new(InstructionSet::ahx), addrmode: Box::new(InstructionSet::aby), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::ldy), addrmode: Box::new(InstructionSet::imm), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::lda), addrmode: Box::new(InstructionSet::izx), cycle: 6},
                 Instruction{opcode: Box::new(InstructionSet::ldx), addrmode: Box::new(InstructionSet::imm), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 6},
+                Instruction{opcode: Box::new(InstructionSet::lax), addrmode: Box::new(InstructionSet::izx), cycle: 6},
                 Instruction{opcode: Box::new(InstructionSet::ldy), addrmode: Box::new(InstructionSet::zp0), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::lda), addrmode: Box::new(InstructionSet::zp0), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::ldx), addrmode: Box::new(InstructionSet::zp0), cycle: 3},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 3},
+                Instruction{opcode: Box::new(InstructionSet::lax), addrmode: Box::new(InstructionSet::zp0), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::tay), addrmode: Box::new(InstructionSet::imp), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::lda), addrmode: Box::new(InstructionSet::imm), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::tax), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 2},
+                Instruction{opcode: Box::new(InstructionSet::lxa), addrmode: Box::new(InstructionSet::imm), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::ldy), addrmode: Box::new(InstructionSet::abs), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::lda), addrmode: Box::new(InstructionSet::abs), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::ldx), addrmode: Box::new(InstructionSet::abs), cycle: 4},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 4},
+                Instruction{opcode: Box::new(InstructionSet::lax), addrmode: Box::new(InstructionSet::abs), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::bcs), addrmode: Box::new(InstructionSet::rel), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::lda), addrmode: Box::new(InstructionSet::izy), cycle: 5},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 5},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
+                Instruction{opcode: Box::new(InstructionSet::lax), addrmode: Box::new(InstructionSet::izy), cycle: 5},
                 Instruction{opcode: Box::new(InstructionSet::ldy), addrmode: Box::new(InstructionSet::zpx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::lda), addrmode: Box::new(InstructionSet::zpx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::ldx), addrmode: Box::new(InstructionSet::zpy), cycle: 4},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 4},
+                Instruction{opcode: Box::new(InstructionSet::lax), addrmode: Box::new(InstructionSet::zpy), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::clv), addrmode: Box::new(InstructionSet::imp), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::lda), addrmode: Box::new(InstructionSet::aby), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::tsx), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 4},
+                Instruction{opcode: Box::new(InstructionSet::las), addrmode: Box::new(InstructionSet::aby), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::ldy), addrmode: Box::new(InstructionSet::abx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::lda), addrmode: Box::new(InstructionSet::abx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::ldx), addrmode: Box::new(InstructionSet::aby), cycle: 4},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 4},
+                Instruction{opcode: Box::new(InstructionSet::lax), addrmode: Box::new(InstructionSet::aby), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::cpy), addrmode: Box::new(InstructionSet::imm), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::cmp), addrmode: Box::new(InstructionSet::izx), cycle: 6},
                 Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 8},
+                Instruction{opcode: Box::new(InstructionSet::dcp), addrmode: Box::new(InstructionSet::izx), cycle: 8},
                 Instruction{opcode: Box::new(InstructionSet::cpy), addrmode: Box::new(InstructionSet::zp0), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::cmp), addrmode: Box::new(InstructionSet::zp0), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::dec), addrmode: Box::new(InstructionSet::zp0), cycle: 5},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 5},
+                Instruction{opcode: Box::new(InstructionSet::dcp), addrmode: Box::new(InstructionSet::zp0), cycle: 5},
                 Instruction{opcode: Box::new(InstructionSet::iny), addrmode: Box::new(InstructionSet::imp), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::cmp), addrmode: Box::new(InstructionSet::imm), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::dex), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 2},
+                Instruction{opcode: Box::new(InstructionSet::axs), addrmode: Box::new(InstructionSet::imm), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::cpy), addrmode: Box::new(InstructionSet::abs), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::cmp), addrmode: Box::new(InstructionSet::abs), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::dec), addrmode: Box::new(InstructionSet::abs), cycle: 6},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 6},
+                Instruction{opcode: Box::new(InstructionSet::dcp), addrmode: Box::new(InstructionSet::abs), cycle: 6},
                 Instruction{opcode: Box::new(InstructionSet::bne), addrmode: Box::new(InstructionSet::rel), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::cmp), addrmode: Box::new(InstructionSet::izy), cycle: 5},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 8},
-                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 4},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
+                Instruction{opcode: Box::new(InstructionSet::dcp), addrmode: Box::new(InstructionSet::izy), cycle: 8},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::zpx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::cmp), addrmode: Box::new(InstructionSet::zpx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::dec), addrmode: Box::new(InstructionSet::zpx), cycle: 6},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 6},
+                Instruction{opcode: Box::new(InstructionSet::dcp), addrmode: Box::new(InstructionSet::zpx), cycle: 6},
                 Instruction{opcode: Box::new(InstructionSet::cld), addrmode: Box::new(InstructionSet::imp), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::cmp), addrmode: Box::new(InstructionSet::aby), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 7},
-                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 4},
+                Instruction{opcode: Box::new(InstructionSet::dcp), addrmode: Box::new(InstructionSet::aby), cycle: 7},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::abx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::cmp), addrmode: Box::new(InstructionSet::abx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::dec), addrmode: Box::new(InstructionSet::abx), cycle: 7},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 7},
+                Instruction{opcode: Box::new(InstructionSet::dcp), addrmode: Box::new(InstructionSet::abx), cycle: 7},
                 Instruction{opcode: Box::new(InstructionSet::cpx), addrmode: Box::new(InstructionSet::imm), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::sbc), addrmode: Box::new(InstructionSet::izx), cycle: 6},
                 Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 8},
+                Instruction{opcode: Box::new(InstructionSet::isb), addrmode: Box::new(InstructionSet::izx), cycle: 8},
                 Instruction{opcode: Box::new(InstructionSet::cpx), addrmode: Box::new(InstructionSet::zp0), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::sbc), addrmode: Box::new(InstructionSet::zp0), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::inc), addrmode: Box::new(InstructionSet::zp0), cycle: 5},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 5},
+                Instruction{opcode: Box::new(InstructionSet::isb), addrmode: Box::new(InstructionSet::zp0), cycle: 5},
                 Instruction{opcode: Box::new(InstructionSet::inx), addrmode: Box::new(InstructionSet::imp), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::sbc), addrmode: Box::new(InstructionSet::imm), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::sbc), addrmode: Box::new(InstructionSet::imp), cycle: 2},
+                Instruction{opcode: Box::new(InstructionSet::sbc), addrmode: Box::new(InstructionSet::imm), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::cpx), addrmode: Box::new(InstructionSet::abs), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::sbc), addrmode: Box::new(InstructionSet::abs), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::inc), addrmode: Box::new(InstructionSet::abs), cycle: 6},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 6},
+                Instruction{opcode: Box::new(InstructionSet::isb), addrmode: Box::new(InstructionSet::abs), cycle: 6},
                 Instruction{opcode: Box::new(InstructionSet::beq), addrmode: Box::new(InstructionSet::rel), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::sbc), addrmode: Box::new(InstructionSet::izy), cycle: 5},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 8},
-                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 4},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
+                Instruction{opcode: Box::new(InstructionSet::isb), addrmode: Box::new(InstructionSet::izy), cycle: 8},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::zpx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::sbc), addrmode: Box::new(InstructionSet::zpx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::inc), addrmode: Box::new(InstructionSet::zpx), cycle: 6},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 6},
+                Instruction{opcode: Box::new(InstructionSet::isb), addrmode: Box::new(InstructionSet::zpx), cycle: 6},
                 Instruction{opcode: Box::new(InstructionSet::sed), addrmode: Box::new(InstructionSet::imp), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::sbc), addrmode: Box::new(InstructionSet::aby), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 7},
-                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 4},
+                Instruction{opcode: Box::new(InstructionSet::isb), addrmode: Box::new(InstructionSet::aby), cycle: 7},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::abx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::sbc), addrmode: Box::new(InstructionSet::abx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::inc), addrmode: Box::new(InstructionSet::abx), cycle: 7},
-                Instruction{opcode: Box::new(InstructionSet::xxx), addrmode: Box::new(InstructionSet::imp), cycle: 7},
+                Instruction{opcode: Box::new(InstructionSet::isb), addrmode: Box::new(InstructionSet::abx), cycle: 7},
             ]
         }
     }
@@ -370,6 +370,21 @@ impl InstructionSet {
         address
     }	
 
+    // Unofficial opcode
+    fn ahx(&self, cpu: &mut CPU) {
+    
+    }
+
+    // Unofficial opcode
+    fn alr(&self, cpu: &mut CPU) {
+    
+    }
+
+    // Unofficial opcode
+    fn anc(&self, cpu: &mut CPU) {
+    
+    }
+
     // Addressing Mode: Indirect
     fn ind(cpu: &mut CPU) -> u16 {
         cpu.reg_pc += 1;
@@ -447,6 +462,11 @@ impl InstructionSet {
         cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
+    // Unofficial opcode
+    fn arr(&self, cpu: &mut CPU) {
+    
+    }
+
     // Instruction: Arithmetic Shift Left
     fn asl(&self, cpu: &mut CPU) {
         // Logic only for Accumulator addressing mode
@@ -467,6 +487,11 @@ impl InstructionSet {
             cpu.set_status_flags(data == 0, StatusFlags::ZERO);
             cpu.set_status_flags((data & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
         }
+    }
+
+    // Unofficial opcode
+    fn axs(&self, cpu: &mut CPU) {
+    
     }
 
     // Instruction: Branch if Carry Clear
@@ -619,6 +644,11 @@ impl InstructionSet {
         cpu.set_status_flags((result & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
+    // Unofficial opcode
+    fn dcp(&self, cpu: &mut CPU) {
+
+    }
+
     // Instruction: Decrement Memory
     fn dec(&self, cpu: &mut CPU) {
         let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
@@ -681,6 +711,11 @@ impl InstructionSet {
         cpu.set_status_flags((cpu.reg_y & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
+    // Unofficial opcode
+    fn isb(&self, cpu: &mut CPU) {
+    
+    }
+
     // Instruction: Jump
     fn jmp(&self, cpu: &mut CPU) {
         if 0x4c == cpu.mem_read(cpu.reg_pc) {
@@ -714,6 +749,16 @@ impl InstructionSet {
         // Subtract by 1 byte back because once we leave this opcode the next instruction will be incremented over
         // Therefore in order to call the next instruction after the jump, we have to subtract by 1 byte back
         cpu.reg_pc = target_address - 1;
+    }
+
+    // Unofficial opcode
+    fn las(&self, cpu: &mut CPU) {
+    
+    }
+
+    // Unofficial opcode
+    fn lax(&self, cpu: &mut CPU) {
+    
     }
 
     // Instruction: Load Accumulator
@@ -768,8 +813,15 @@ impl InstructionSet {
         }         
     }
 
+    // Unofficial opcode
+    fn lxa(&self, cpu: &mut CPU) {
+    
+    }
+
     // Instruction: No Operation
-    fn nop(&self, _cpu: &mut CPU) {}
+    fn nop(&self, _cpu: &mut CPU) {
+
+    }
 
     // Instruction: Logical Inclusive OR
     fn ora(&self, cpu: &mut CPU) {
@@ -808,6 +860,11 @@ impl InstructionSet {
         cpu.store_bitflags(data);
         cpu.reg_status.remove(StatusFlags::BREAK);
         cpu.reg_status.insert(StatusFlags::UNUSED);
+    }
+
+    // Unofficial opcode
+    fn rla(&self, cpu: &mut CPU) {
+    
     }
 
     // Instruction: Rotate Left
@@ -874,6 +931,11 @@ impl InstructionSet {
         }
     }
 
+    // Unofficial opcode
+    fn rra(&self, cpu: &mut CPU) {
+    
+    }
+
     // Instruction: Return from Interrupt
     fn rti(&self, cpu: &mut CPU) {
         let data = cpu.stack_pop();
@@ -889,6 +951,11 @@ impl InstructionSet {
         // Considering that we pushed the Return address 1 byte during the subroutine call
         // we wouldnt need to offset return address by 1
         cpu.reg_pc = cpu.stack_pop_u16();
+    }
+
+    // Unofficial opcode
+    fn sax(&self, cpu: &mut CPU) {
+    
     }
 
     // Instruction: Subtract with Carry
@@ -941,6 +1008,26 @@ impl InstructionSet {
         cpu.reg_status.insert(StatusFlags::INTERRUPT);   
     }
 
+    // Unofficial opcode
+    fn shx(&self, cpu: &mut CPU) {
+    
+    }
+
+    // Unofficial opcode
+    fn shy(&self, cpu: &mut CPU) {
+    
+    }
+
+    // Unofficial opcode
+    fn slo(&self, cpu: &mut CPU) {
+    
+    }
+
+    // Unofficial opcode
+    fn sre(&self, cpu: &mut CPU) {
+    
+    }
+
     // Instruction: Store Accumulator
     fn sta(&self, cpu: &mut CPU) {
         let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
@@ -957,6 +1044,11 @@ impl InstructionSet {
     fn sty(&self, cpu: &mut CPU) {
         let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
         cpu.mem_write(address, cpu.reg_y);
+    }
+
+    // Unofficial opcode
+    fn tas(&self, cpu: &mut CPU) {
+    
     }
 
     // Instruction: Transfer Accumulator to X
@@ -1004,8 +1096,10 @@ impl InstructionSet {
         cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // Added Instruction to fill the Opcode Matrix; does not exist in the real NES instruction set
-    // Effectively does nothing but does nothing better than NOP
-    // According to OLC not all NOPs are similar so this opcode exist as a true NOP
-    fn xxx(&self, _cpu: &mut CPU) {}
+    // Unofficial opcode
+    fn xaa(&self, cpu: &mut CPU) {
+    
+    }
 }
+
+
