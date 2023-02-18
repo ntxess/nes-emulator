@@ -370,21 +370,6 @@ impl InstructionSet {
         address
     }	
 
-    // Unofficial opcode
-    fn ahx(&self, cpu: &mut CPU) {
-    
-    }
-
-    // Unofficial opcode
-    fn alr(&self, cpu: &mut CPU) {
-    
-    }
-
-    // Unofficial opcode
-    fn anc(&self, cpu: &mut CPU) {
-    
-    }
-
     // Addressing Mode: Indirect
     fn ind(cpu: &mut CPU) -> u16 {
         cpu.reg_pc += 1;
@@ -452,6 +437,21 @@ impl InstructionSet {
         cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
+    // TODO Unofficial opcode
+    fn ahx(&self, cpu: &mut CPU) {
+        
+    }
+
+    // TODO Unofficial opcode
+    fn alr(&self, cpu: &mut CPU) {
+    
+    }
+
+    // TODO Unofficial opcode
+    fn anc(&self, cpu: &mut CPU) {
+    
+    }
+
     // Instruction: Logic AND
     fn and(&self, cpu: &mut CPU) {
         let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
@@ -462,7 +462,7 @@ impl InstructionSet {
         cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // Unofficial opcode
+    // TODO Unofficial opcode
     fn arr(&self, cpu: &mut CPU) {
     
     }
@@ -489,7 +489,7 @@ impl InstructionSet {
         }
     }
 
-    // Unofficial opcode
+    // TODO Unofficial opcode
     fn axs(&self, cpu: &mut CPU) {
     
     }
@@ -647,13 +647,16 @@ impl InstructionSet {
     // Unofficial opcode
     fn dcp(&self, cpu: &mut CPU) {
         let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
-        let data = cpu.mem_read(address);
-        let result = data.wrapping_sub(1);
-        cpu.mem_write(address, result);
+        let mut data = cpu.mem_read(address);
+        data = data.wrapping_sub(1);
+        cpu.mem_write(address, data);
 
-        cpu.set_status_flags(result <= cpu.reg_acc, StatusFlags::CARRY);
-        cpu.set_status_flags(cpu.reg_acc.wrapping_sub(result) == 0, StatusFlags::ZERO);
-        cpu.set_status_flags((cpu.reg_acc.wrapping_sub(result) & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
+        if data <= cpu.reg_acc {
+            cpu.reg_status.insert(StatusFlags::CARRY);
+        }
+
+        cpu.set_status_flags(cpu.reg_acc.wrapping_sub(data) == 0, StatusFlags::ZERO);
+        cpu.set_status_flags((cpu.reg_acc.wrapping_sub(data) & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
     // Instruction: Decrement Memory
@@ -718,7 +721,7 @@ impl InstructionSet {
         cpu.set_status_flags((cpu.reg_y & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // Unofficial opcode
+    // TODO Unofficial opcode
     fn isb(&self, cpu: &mut CPU) {
     
     }
@@ -758,12 +761,12 @@ impl InstructionSet {
         cpu.reg_pc = target_address - 1;
     }
 
-    // Unofficial opcode
+    // TODO Unofficial opcode
     fn las(&self, cpu: &mut CPU) {
     
     }
 
-    // Unofficial opcode
+    // TODO Unofficial opcode
     fn lax(&self, cpu: &mut CPU) {
     
     }
@@ -820,14 +823,26 @@ impl InstructionSet {
         }         
     }
 
-    // Unofficial opcode
+    // TODO Unofficial opcode
     fn lxa(&self, cpu: &mut CPU) {
     
     }
 
     // Instruction: No Operation
-    fn nop(&self, _cpu: &mut CPU) {
+    // This includes the unofficial Double NOP: DOP
+    // It grabs the address just to move forward the reg_pc but does not actually do anything
+    fn nop(&self, cpu: &mut CPU) {
+        let code = cpu.mem_read(cpu.reg_pc);
 
+        match code {
+            0x80 | 0x82 | 0x89 | 0xc2 | 0xe2 | 0x04 | 0x44 | 
+            0x64 | 0x14 | 0x34 | 0x54 | 0x74 | 0xd4 | 0xf4 | 
+            0x0c | 0x1c | 0x3c | 0x5c | 0x7c | 0xdc | 0xfc => {
+                let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+                let _data = cpu.mem_read(address);
+            }
+            _ => {}
+        }
     }
 
     // Instruction: Logical Inclusive OR
@@ -871,7 +886,23 @@ impl InstructionSet {
 
     // Unofficial opcode
     fn rla(&self, cpu: &mut CPU) {
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        let mut data = cpu.mem_read(address);
+        let carry = cpu.reg_status.contains(StatusFlags::CARRY);
+        cpu.set_status_flags(data >> 7 == 1, StatusFlags::CARRY);
+        data = data << 1;
         
+        if carry {
+            data = data | 1;
+        }
+        cpu.mem_write(address, data);
+
+        cpu.set_status_flags((data & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
+
+        cpu.reg_acc &= data;
+
+        cpu.set_status_flags(cpu.reg_acc == 0, StatusFlags::ZERO);
+        cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
     // Instruction: Rotate Left
@@ -938,7 +969,7 @@ impl InstructionSet {
         }
     }
 
-    // Unofficial opcode
+    // TODO Unofficial opcode
     fn rra(&self, cpu: &mut CPU) {
     
     }
@@ -960,7 +991,7 @@ impl InstructionSet {
         cpu.reg_pc = cpu.stack_pop_u16();
     }
 
-    // Unofficial opcode
+    // TODO Unofficial opcode
     fn sax(&self, cpu: &mut CPU) {
     
     }
@@ -1015,24 +1046,53 @@ impl InstructionSet {
         cpu.reg_status.insert(StatusFlags::INTERRUPT);   
     }
 
-    // Unofficial opcode
+    // TODO Unofficial opcode
     fn shx(&self, cpu: &mut CPU) {
-    
+        // let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        // let data = cpu.mem_read(address);
+        // cpu.reg_x = data;
+
+        // cpu.set_status_flags(cpu.reg_x == 0, StatusFlags::ZERO);
+        // cpu.set_status_flags((cpu.reg_x & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // Unofficial opcode
+    // TODO Unofficial opcode
     fn shy(&self, cpu: &mut CPU) {
     
     }
 
     // Unofficial opcode
     fn slo(&self, cpu: &mut CPU) {
-    
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        let mut data = cpu.mem_read(address);
+        cpu.set_status_flags(data >> 7 == 1, StatusFlags::CARRY);
+        data = data << 1;
+        cpu.mem_write(address, data);
+
+        cpu.set_status_flags(data == 0, StatusFlags::ZERO);
+        cpu.set_status_flags((data & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
+
+        cpu.reg_acc |= data;
+
+        cpu.set_status_flags(cpu.reg_acc == 0, StatusFlags::ZERO);
+        cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
     // Unofficial opcode
     fn sre(&self, cpu: &mut CPU) {
-    
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        let mut data = cpu.mem_read(address);
+        cpu.set_status_flags(data & 1 == 1, StatusFlags::CARRY);
+        data = data >> 1;
+        cpu.mem_write(address, data);
+
+        cpu.set_status_flags(data == 0, StatusFlags::ZERO);
+        cpu.set_status_flags((data & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
+
+        cpu.reg_acc ^= data;
+
+        cpu.set_status_flags(cpu.reg_acc == 0, StatusFlags::ZERO);
+        cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
     // Instruction: Store Accumulator
@@ -1055,7 +1115,10 @@ impl InstructionSet {
 
     // Unofficial opcode
     fn tas(&self, cpu: &mut CPU) {
-    
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu) + (cpu.reg_y as u16);
+        cpu.reg_stack_ptr = cpu.reg_acc & cpu.reg_x;
+        let data = ((address >> 8) as u8 + 1) & cpu.reg_stack_ptr;
+        cpu.mem_write(address, data);
     }
 
     // Instruction: Transfer Accumulator to X
@@ -1105,7 +1168,17 @@ impl InstructionSet {
 
     // Unofficial opcode
     fn xaa(&self, cpu: &mut CPU) {
-    
+        cpu.reg_acc = cpu.reg_x;
+
+        cpu.set_status_flags(cpu.reg_acc == 0, StatusFlags::ZERO);
+        cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
+
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        let data = cpu.mem_read(address);
+        cpu.reg_acc &= data;
+
+        cpu.set_status_flags(cpu.reg_acc == 0, StatusFlags::ZERO);
+        cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 }
 

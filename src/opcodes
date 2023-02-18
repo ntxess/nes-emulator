@@ -1,4 +1,3 @@
-// Temp instruction set
 Instruction{opcode: Box::new(InstructionSet::brk), addrmode: Box::new(InstructionSet::imp), cycle: 7},
 Instruction{opcode: Box::new(InstructionSet::ora), addrmode: Box::new(InstructionSet::izx), cycle: 6},
 Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
