@@ -14,7 +14,7 @@ use sdl2::EventPump;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::pixels::PixelFormatEnum;
-use std::time::Duration;
+// use std::time::Duration;
 
 // Temporary main implementation from bugzmanov nes_ebook for bug testing opcodes
 

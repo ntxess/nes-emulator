@@ -437,19 +437,42 @@ impl InstructionSet {
         cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // TODO Unofficial opcode
+    // Unofficial opcode
     fn ahx(&self, cpu: &mut CPU) {
-        
+        let address: u16;
+        if 0x93 == cpu.mem_read(cpu.reg_pc) {
+            let pos: u8 = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu) as u8;
+            address = cpu.mem_read_u16(pos as u16) + cpu.reg_y as u16;
+        } else {
+            address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu) + cpu.reg_y as u16;
+        }
+        let data = cpu.reg_acc & cpu.reg_x & (address >> 8) as u8;
+        cpu.mem_write(address, data)
     }
 
-    // TODO Unofficial opcode
+    // Unofficial opcode
     fn alr(&self, cpu: &mut CPU) {
-    
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        let data = cpu.mem_read(address);
+        cpu.reg_acc &= data;
+
+        cpu.set_status_flags(cpu.reg_acc & 1 == 1, StatusFlags::CARRY);
+
+        cpu.reg_acc = cpu.reg_acc >> 1;
+
+        cpu.set_status_flags(cpu.reg_acc == 0, StatusFlags::ZERO);
+        cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // TODO Unofficial opcode
+    // Unofficial opcode
     fn anc(&self, cpu: &mut CPU) {
-    
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        let data = cpu.mem_read(address);
+        cpu.reg_acc &= data;
+
+        cpu.set_status_flags(cpu.reg_acc == 0, StatusFlags::ZERO);
+        cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
+        cpu.set_status_flags(cpu.reg_status.contains(StatusFlags::NEGATIVE), StatusFlags::CARRY);
     }
 
     // Instruction: Logic AND
@@ -462,9 +485,31 @@ impl InstructionSet {
         cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // TODO Unofficial opcode
+    // Unofficial opcode
     fn arr(&self, cpu: &mut CPU) {
-    
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        let data = cpu.mem_read(address);
+        cpu.reg_acc &= data;
+
+        cpu.set_status_flags(cpu.reg_acc == 0, StatusFlags::ZERO);
+        cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
+
+        let carry = cpu.reg_status.contains(StatusFlags::CARRY);
+        cpu.set_status_flags(cpu.reg_acc & 1 == 1, StatusFlags::CARRY);
+        cpu.reg_acc = cpu.reg_acc >> 1;
+        
+        if carry {
+            cpu.reg_acc = cpu.reg_acc | 0b10000000;
+        }
+
+        cpu.set_status_flags(cpu.reg_acc == 0, StatusFlags::ZERO);
+        cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
+
+        let bit_5 = (cpu.reg_acc >> 5) & 1;
+        let bit_6 = (cpu.reg_acc >> 6) & 1;
+
+        cpu.set_status_flags(bit_6 == 1, StatusFlags::CARRY);
+        cpu.set_status_flags(bit_5 ^ bit_6 == 1, StatusFlags::OVERFLOW);
     }
 
     // Instruction: Arithmetic Shift Left
@@ -489,9 +534,19 @@ impl InstructionSet {
         }
     }
 
-    // TODO Unofficial opcode
+    // Unofficial opcode
     fn axs(&self, cpu: &mut CPU) {
-    
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        let data = cpu.mem_read(address);
+        let x_and_a = cpu.reg_x & cpu.reg_acc;
+        cpu.reg_x = x_and_a.wrapping_sub(data);
+
+        if data <= x_and_a {
+            cpu.reg_status.insert(StatusFlags::CARRY);
+        }
+
+        cpu.set_status_flags(cpu.reg_x == 0, StatusFlags::ZERO);
+        cpu.set_status_flags((cpu.reg_x & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
     // Instruction: Branch if Carry Clear
@@ -721,9 +776,44 @@ impl InstructionSet {
         cpu.set_status_flags((cpu.reg_y & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // TODO Unofficial opcode
+    // Unofficial opcode
     fn isb(&self, cpu: &mut CPU) {
-    
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        let mut data = cpu.mem_read(address).wrapping_add(1);
+        cpu.mem_write(address, data);
+
+        cpu.set_status_flags(data == 0, StatusFlags::ZERO);
+        cpu.set_status_flags((data & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
+
+        data = (data as i8).wrapping_neg().wrapping_sub(1) as u8;
+
+        let sum = cpu.reg_acc as u16
+            + data as u16
+            + (if cpu.reg_status.contains(StatusFlags::CARRY) {
+                1
+            } else {
+                0
+            }) as u16;
+
+        let carry = sum > 0xff;
+
+        if carry {
+            cpu.reg_status.insert(StatusFlags::CARRY);
+        } else {
+            cpu.reg_status.remove(StatusFlags::CARRY);
+        }
+
+        let result = sum as u8;
+
+        if (data ^ result) & (result ^ cpu.reg_acc) & 0x80 != 0 {
+            cpu.reg_status.insert(StatusFlags::OVERFLOW);
+        } else {
+            cpu.reg_status.remove(StatusFlags::OVERFLOW)
+        }
+        cpu.reg_acc = result;
+        
+        cpu.set_status_flags(cpu.reg_acc == 0, StatusFlags::ZERO);
+        cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
     // Instruction: Jump
@@ -761,14 +851,29 @@ impl InstructionSet {
         cpu.reg_pc = target_address - 1;
     }
 
-    // TODO Unofficial opcode
+    // Unofficial opcode
     fn las(&self, cpu: &mut CPU) {
-    
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        let mut data = cpu.mem_read(address);
+        data &= cpu.reg_stack_ptr;
+        cpu.reg_acc = data;
+        cpu.reg_x = data;
+        cpu.reg_stack_ptr = data;
+
+        cpu.set_status_flags(data == 0, StatusFlags::ZERO);
+        cpu.set_status_flags((data & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
-    // TODO Unofficial opcode
+    // Unofficial opcode
     fn lax(&self, cpu: &mut CPU) {
-    
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        let data = cpu.mem_read(address);
+        cpu.reg_acc = data;
+
+        cpu.set_status_flags(cpu.reg_acc == 0, StatusFlags::ZERO);
+        cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
+        
+        cpu.reg_x = cpu.reg_acc;
     }
 
     // Instruction: Load Accumulator
@@ -823,9 +928,19 @@ impl InstructionSet {
         }         
     }
 
-    // TODO Unofficial opcode
+    // Unofficial opcode
     fn lxa(&self, cpu: &mut CPU) {
-    
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        let data = cpu.mem_read(address);
+        cpu.reg_acc = data;
+
+        cpu.set_status_flags(cpu.reg_acc == 0, StatusFlags::ZERO);
+        cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
+
+        cpu.reg_x = cpu.reg_acc;
+
+        cpu.set_status_flags(cpu.reg_x == 0, StatusFlags::ZERO);
+        cpu.set_status_flags((cpu.reg_x & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
     // Instruction: No Operation
@@ -969,9 +1084,48 @@ impl InstructionSet {
         }
     }
 
-    // TODO Unofficial opcode
+    // Unofficial opcode
     fn rra(&self, cpu: &mut CPU) {
-    
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        let mut data = cpu.mem_read(address);
+        let old_carry = cpu.reg_status.contains(StatusFlags::CARRY);
+
+        cpu.set_status_flags(data & 1 == 1, StatusFlags::CARRY);
+
+        data = data >> 1;
+        
+        if old_carry {
+            data = data | 0b10000000;
+        }
+        cpu.mem_write(address, data);
+
+        cpu.set_status_flags((data & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
+
+        let sum = cpu.reg_acc as u16
+            + data as u16
+            + (if cpu.reg_status.contains(StatusFlags::CARRY) {
+                1
+            } else {
+                0
+            }) as u16;
+
+        let carry = sum > 0xff;
+        if carry {
+            cpu.reg_status.insert(StatusFlags::CARRY);
+        } else {
+            cpu.reg_status.remove(StatusFlags::CARRY);
+        }
+        let result = sum as u8;
+
+        if (data ^ result) & (result ^ cpu.reg_acc) & 0x80 != 0 {
+            cpu.reg_status.insert(StatusFlags::OVERFLOW);
+        } else {
+            cpu.reg_status.remove(StatusFlags::OVERFLOW)
+        }
+        cpu.reg_acc = result;
+
+        cpu.set_status_flags(cpu.reg_acc == 0, StatusFlags::ZERO);
+        cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
     }
 
     // Instruction: Return from Interrupt
@@ -993,7 +1147,9 @@ impl InstructionSet {
 
     // TODO Unofficial opcode
     fn sax(&self, cpu: &mut CPU) {
-    
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
+        let data = cpu.reg_acc & cpu.reg_x;
+        cpu.mem_write(address, data);
     }
 
     // Instruction: Subtract with Carry
@@ -1023,7 +1179,7 @@ impl InstructionSet {
         if (data ^ result) & (result ^ cpu.reg_acc) & 0x80 != 0 {
             cpu.reg_status.insert(StatusFlags::OVERFLOW);
         } else {
-            cpu.reg_status.remove(StatusFlags::OVERFLOW)
+            cpu.reg_status.remove(StatusFlags::OVERFLOW);
         }
         cpu.reg_acc = result;
         
@@ -1046,19 +1202,18 @@ impl InstructionSet {
         cpu.reg_status.insert(StatusFlags::INTERRUPT);   
     }
 
-    // TODO Unofficial opcode
+    // Unofficial opcode
     fn shx(&self, cpu: &mut CPU) {
-        // let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
-        // let data = cpu.mem_read(address);
-        // cpu.reg_x = data;
-
-        // cpu.set_status_flags(cpu.reg_x == 0, StatusFlags::ZERO);
-        // cpu.set_status_flags((cpu.reg_x & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu) + (cpu.reg_y as u16);
+        let data = cpu.reg_x & ((address >> 8) as u8 + 1);
+        cpu.mem_write(address, data);
     }
 
-    // TODO Unofficial opcode
+    // Unofficial opcode
     fn shy(&self, cpu: &mut CPU) {
-    
+        let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu) + (cpu.reg_x as u16);
+        let data = cpu.reg_y & ((address >> 8) as u8 + 1);
+        cpu.mem_write(address, data);
     }
 
     // Unofficial opcode
