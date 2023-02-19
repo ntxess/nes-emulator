@@ -2,12 +2,15 @@ pub mod cpu;
 pub mod opcodes;
 pub mod bus;
 pub mod cartridge;
+pub mod trace;
+pub mod debugcodes;
 
 use cpu::CPU;
 use cpu::Mem;
 use bus::Bus;
 use cartridge::Rom;
-use rand::Rng;
+// use rand::Rng;
+use trace::trace;
 
 use sdl2::event::Event;
 use sdl2::EventPump;
@@ -17,6 +20,8 @@ use sdl2::pixels::PixelFormatEnum;
 // use std::time::Duration;
 
 // Temporary main implementation from bugzmanov nes_ebook for bug testing opcodes
+#[macro_use]
+extern crate lazy_static;
 
 #[macro_use]
 extern crate bitflags;
@@ -121,19 +126,19 @@ fn main() {
 
     // run the game cycle
     cpu.run_with_callback(move |cpu| {
-        // println!("{}", trace(cpu));
-        handle_user_input(cpu, &mut event_pump);
+        println!("{}", trace(cpu));
+        // handle_user_input(cpu, &mut event_pump);
 
-        cpu.mem_write(0xfe, rng.gen_range(1..16));
+        // cpu.mem_write(0xfe, rng.gen_range(1..16));
 
-        if read_screen_state(cpu, &mut screen_state) {
-            texture.update(None, &screen_state, 32 * 3).unwrap();
+        // if read_screen_state(cpu, &mut screen_state) {
+        //     texture.update(None, &screen_state, 32 * 3).unwrap();
 
-            canvas.copy(&texture, None, None).unwrap();
+        //     canvas.copy(&texture, None, None).unwrap();
 
-            canvas.present();
-        }
+        //     canvas.present();
+        // }
 
-        ::std::thread::sleep(std::time::Duration::new(0, 70_000));
+        // ::std::thread::sleep(std::time::Duration::new(0, 70_000));
     });
 }

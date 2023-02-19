@@ -1,4 +1,4 @@
-use crate::cpu::{CPU, StatusFlags, Mem};
+use crate::{cpu::{CPU, StatusFlags, Mem}, trace::trace_memory};
 
 pub struct Instruction {
     opcode:   Box<dyn Fn(&InstructionSet, &mut CPU)>,
@@ -12,7 +12,6 @@ pub struct InstructionSet {
 
 impl InstructionSet {
     pub fn new() -> Self {
-        println!("New Set");
         InstructionSet {
             // Massive Instruction Set Matrix from OneLoneCoder's own emulator repo, Thank you!
             // Copyright 2018, 2019, 2020, 2021 OneLoneCoder.com
@@ -298,44 +297,50 @@ impl InstructionSet {
     // Thus, we can use it for opcodes that require the Accumulator addressing mode as well
     // This code call is mostly redundant but added for the sake of implementation per the NES engineering guide
     fn imp(cpu: &mut CPU) -> u16 { 
+        unsafe { trace_memory(cpu.reg_pc) };
         cpu.reg_acc as u16
     }
 
     // Addressing Mode: Immediate
     fn imm(cpu: &mut CPU) -> u16 {
         cpu.reg_pc += 1;
+        unsafe { trace_memory(cpu.reg_pc) };
         cpu.reg_pc
     }
 
     // Addressing Mode: Zero Page
     fn zp0(cpu: &mut CPU) -> u16 {
         cpu.reg_pc += 1;
-
+        
         let address = cpu.mem_read(cpu.reg_pc) as u16;
+        unsafe { trace_memory(address) };
         address
     }		
 
     // Addressing Mode: Zero Page, X
     fn zpx(cpu: &mut CPU) -> u16 {
         cpu.reg_pc += 1;
-
+        
         let pos = cpu.mem_read(cpu.reg_pc);
         let address = pos.wrapping_add(cpu.reg_x) as u16;
+        unsafe { trace_memory(address) };
         address
     }
 
     // Addressing Mode: Zero Page, Y
     fn zpy(cpu: &mut CPU) -> u16 {
         cpu.reg_pc += 1;
-
+        
         let pos = cpu.mem_read(cpu.reg_pc);
         let address = pos.wrapping_add(cpu.reg_y) as u16;
+        unsafe { trace_memory(address) };
         address
     }
 
     // Addressing Mode: Relative
     fn rel(cpu: &mut CPU) -> u16 { 
         cpu.reg_pc += 1;
+        unsafe { trace_memory(cpu.reg_pc as u16) };
         cpu.reg_pc
     }
 
@@ -347,6 +352,7 @@ impl InstructionSet {
 
         let address = cpu.mem_read_u16(cpu.reg_pc);
         cpu.reg_pc += 1;
+        unsafe { trace_memory(address) };
         address
     }
 
@@ -357,6 +363,7 @@ impl InstructionSet {
         let base = cpu.mem_read_u16(cpu.reg_pc);
         let address = base.wrapping_add(cpu.reg_x as u16);
         cpu.reg_pc += 1;
+        unsafe { trace_memory(address) };
         address
     }
 
@@ -367,6 +374,7 @@ impl InstructionSet {
         let base = cpu.mem_read_u16(cpu.reg_pc);
         let address = base.wrapping_add(cpu.reg_y as u16);
         cpu.reg_pc += 1;
+        unsafe { trace_memory(address) };
         address
     }	
 
@@ -376,6 +384,7 @@ impl InstructionSet {
 
         let address = cpu.mem_read_u16(cpu.reg_pc);
         cpu.reg_pc += 1;
+        unsafe { trace_memory(address) };
         address
     }
 
@@ -388,6 +397,7 @@ impl InstructionSet {
         let lo = cpu.mem_read(ptr as u16);
         let hi = cpu.mem_read(ptr.wrapping_add(1) as u16);
         let address = (hi as u16) << 8 | (lo as u16);
+        unsafe { trace_memory(address) };
         address
     }
 
@@ -400,6 +410,7 @@ impl InstructionSet {
         let hi = cpu.mem_read((base as u8).wrapping_add(1) as u16);
         let deref_base = (hi as u16) << 8 | (lo as u16);
         let deref = deref_base.wrapping_add(cpu.reg_y as u16);
+        unsafe { trace_memory(deref) };
         deref
     }
 
@@ -418,19 +429,12 @@ impl InstructionSet {
 
         let carry = sum > 0xff;
 
-        if carry {
-            cpu.reg_status.insert(StatusFlags::CARRY);
-        } else {
-            cpu.reg_status.remove(StatusFlags::CARRY);
-        }
+        cpu.set_status_flags(carry, StatusFlags::CARRY);
 
         let result = sum as u8;
 
-        if (data ^ result) & (result ^ cpu.reg_acc) & 0x80 != 0 {
-            cpu.reg_status.insert(StatusFlags::OVERFLOW);
-        } else {
-            cpu.reg_status.remove(StatusFlags::OVERFLOW)
-        }
+        cpu.set_status_flags((data ^ result) & (result ^ cpu.reg_acc) & 0x80 != 0, StatusFlags::OVERFLOW);
+
         cpu.reg_acc = result;
 
         cpu.set_status_flags(cpu.reg_acc == 0, StatusFlags::ZERO);
@@ -797,19 +801,12 @@ impl InstructionSet {
 
         let carry = sum > 0xff;
 
-        if carry {
-            cpu.reg_status.insert(StatusFlags::CARRY);
-        } else {
-            cpu.reg_status.remove(StatusFlags::CARRY);
-        }
+        cpu.set_status_flags(carry, StatusFlags::CARRY);
 
         let result = sum as u8;
 
-        if (data ^ result) & (result ^ cpu.reg_acc) & 0x80 != 0 {
-            cpu.reg_status.insert(StatusFlags::OVERFLOW);
-        } else {
-            cpu.reg_status.remove(StatusFlags::OVERFLOW)
-        }
+        cpu.set_status_flags((data ^ result) & (result ^ cpu.reg_acc) & 0x80 != 0, StatusFlags::OVERFLOW);
+
         cpu.reg_acc = result;
         
         cpu.set_status_flags(cpu.reg_acc == 0, StatusFlags::ZERO);
@@ -964,7 +961,7 @@ impl InstructionSet {
     fn ora(&self, cpu: &mut CPU) {
         let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
         let data = cpu.mem_read(address);
-        cpu.reg_acc = cpu.reg_acc | data;
+        cpu.reg_acc |= data;
         
         cpu.set_status_flags(cpu.reg_acc == 0, StatusFlags::ZERO);
         cpu.set_status_flags((cpu.reg_acc & StatusFlags::NEGATIVE.bits()) != 0, StatusFlags::NEGATIVE);
@@ -978,6 +975,7 @@ impl InstructionSet {
     // Instruction: Push Processor Status
     fn php(&self, cpu: &mut CPU) {
         let mut flags = cpu.reg_status.clone();
+
         flags.insert(StatusFlags::BREAK);
         flags.insert(StatusFlags::UNUSED);
         cpu.stack_push(flags.bits());
@@ -995,6 +993,7 @@ impl InstructionSet {
     fn plp(&self, cpu: &mut CPU) {
         let data = cpu.stack_pop();
         cpu.store_bitflags(data);
+
         cpu.reg_status.remove(StatusFlags::BREAK);
         cpu.reg_status.insert(StatusFlags::UNUSED);
     }
@@ -1110,18 +1109,13 @@ impl InstructionSet {
             }) as u16;
 
         let carry = sum > 0xff;
-        if carry {
-            cpu.reg_status.insert(StatusFlags::CARRY);
-        } else {
-            cpu.reg_status.remove(StatusFlags::CARRY);
-        }
+
+        cpu.set_status_flags(carry, StatusFlags::CARRY);
+
         let result = sum as u8;
 
-        if (data ^ result) & (result ^ cpu.reg_acc) & 0x80 != 0 {
-            cpu.reg_status.insert(StatusFlags::OVERFLOW);
-        } else {
-            cpu.reg_status.remove(StatusFlags::OVERFLOW)
-        }
+        cpu.set_status_flags((data ^ result) & (result ^ cpu.reg_acc) & 0x80 != 0, StatusFlags::OVERFLOW);
+
         cpu.reg_acc = result;
 
         cpu.set_status_flags(cpu.reg_acc == 0, StatusFlags::ZERO);
@@ -1136,6 +1130,7 @@ impl InstructionSet {
         cpu.reg_status.insert(StatusFlags::UNUSED);
 
         cpu.reg_pc = cpu.stack_pop_u16();
+        cpu.reg_pc -= 1;
     }
 
     // Instruction: Return from Subroutine
@@ -1145,7 +1140,7 @@ impl InstructionSet {
         cpu.reg_pc = cpu.stack_pop_u16();
     }
 
-    // TODO Unofficial opcode
+    // Unofficial opcode
     fn sax(&self, cpu: &mut CPU) {
         let address = self.get_address(cpu.mem_read(cpu.reg_pc))(cpu);
         let data = cpu.reg_acc & cpu.reg_x;
@@ -1168,19 +1163,12 @@ impl InstructionSet {
 
         let carry = sum > 0xff;
 
-        if carry {
-            cpu.reg_status.insert(StatusFlags::CARRY);
-        } else {
-            cpu.reg_status.remove(StatusFlags::CARRY);
-        }
+        cpu.set_status_flags(carry, StatusFlags::CARRY);
 
         let result = sum as u8;
 
-        if (data ^ result) & (result ^ cpu.reg_acc) & 0x80 != 0 {
-            cpu.reg_status.insert(StatusFlags::OVERFLOW);
-        } else {
-            cpu.reg_status.remove(StatusFlags::OVERFLOW);
-        }
+        cpu.set_status_flags((data ^ result) & (result ^ cpu.reg_acc) & 0x80 != 0, StatusFlags::OVERFLOW);
+
         cpu.reg_acc = result;
         
         cpu.set_status_flags(cpu.reg_acc == 0, StatusFlags::ZERO);
