@@ -9,7 +9,7 @@ use cpu::CPU;
 use cpu::Mem;
 use bus::Bus;
 use cartridge::Rom;
-// use rand::Rng;
+use rand::Rng;
 use trace::trace;
 
 use sdl2::event::Event;

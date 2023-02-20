@@ -152,12 +152,11 @@ impl CPU {
         let matrix = InstructionSet::new();
         
         while self.mem_read(self.reg_pc) != 0x00 {
+            callback(self);
             let code = self.mem_read(self.reg_pc);
-
+            
             matrix.call_opcode(code)(&matrix, self);
             self.reg_pc += 1;
-
-            callback(self);
         }
     }
 }
