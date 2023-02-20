@@ -1,4 +1,4 @@
-use crate::{cpu::{CPU, StatusFlags, Mem}, trace::trace_memory};
+use crate::{cpu::{CPU, StatusFlags, Mem}};
 
 pub struct Instruction {
     opcode:   Box<dyn Fn(&InstructionSet, &mut CPU)>,
@@ -147,16 +147,16 @@ impl InstructionSet {
                 Instruction{opcode: Box::new(InstructionSet::adc), addrmode: Box::new(InstructionSet::abx), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::ror), addrmode: Box::new(InstructionSet::abx), cycle: 7},
                 Instruction{opcode: Box::new(InstructionSet::rra), addrmode: Box::new(InstructionSet::abx), cycle: 7},
-                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imm), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::sta), addrmode: Box::new(InstructionSet::izx), cycle: 6},
-                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imm), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::sax), addrmode: Box::new(InstructionSet::izx), cycle: 6},
                 Instruction{opcode: Box::new(InstructionSet::sty), addrmode: Box::new(InstructionSet::zp0), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::sta), addrmode: Box::new(InstructionSet::zp0), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::stx), addrmode: Box::new(InstructionSet::zp0), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::sax), addrmode: Box::new(InstructionSet::zp0), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::dey), addrmode: Box::new(InstructionSet::imp), cycle: 2},
-                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imm), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::txa), addrmode: Box::new(InstructionSet::imp), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::xaa), addrmode: Box::new(InstructionSet::imm), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::sty), addrmode: Box::new(InstructionSet::abs), cycle: 4},
@@ -213,7 +213,7 @@ impl InstructionSet {
                 Instruction{opcode: Box::new(InstructionSet::lax), addrmode: Box::new(InstructionSet::aby), cycle: 4},
                 Instruction{opcode: Box::new(InstructionSet::cpy), addrmode: Box::new(InstructionSet::imm), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::cmp), addrmode: Box::new(InstructionSet::izx), cycle: 6},
-                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imm), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::dcp), addrmode: Box::new(InstructionSet::izx), cycle: 8},
                 Instruction{opcode: Box::new(InstructionSet::cpy), addrmode: Box::new(InstructionSet::zp0), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::cmp), addrmode: Box::new(InstructionSet::zp0), cycle: 3},
@@ -245,7 +245,7 @@ impl InstructionSet {
                 Instruction{opcode: Box::new(InstructionSet::dcp), addrmode: Box::new(InstructionSet::abx), cycle: 7},
                 Instruction{opcode: Box::new(InstructionSet::cpx), addrmode: Box::new(InstructionSet::imm), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::sbc), addrmode: Box::new(InstructionSet::izx), cycle: 6},
-                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imp), cycle: 2},
+                Instruction{opcode: Box::new(InstructionSet::nop), addrmode: Box::new(InstructionSet::imm), cycle: 2},
                 Instruction{opcode: Box::new(InstructionSet::isb), addrmode: Box::new(InstructionSet::izx), cycle: 8},
                 Instruction{opcode: Box::new(InstructionSet::cpx), addrmode: Box::new(InstructionSet::zp0), cycle: 3},
                 Instruction{opcode: Box::new(InstructionSet::sbc), addrmode: Box::new(InstructionSet::zp0), cycle: 3},
@@ -297,50 +297,41 @@ impl InstructionSet {
     // Thus, we can use it for opcodes that require the Accumulator addressing mode as well
     // This code call is mostly redundant but added for the sake of implementation per the NES engineering guide
     fn imp(cpu: &mut CPU) -> u16 { 
-        unsafe { trace_memory(cpu.reg_pc) };
         cpu.reg_acc as u16
     }
 
     // Addressing Mode: Immediate
     fn imm(cpu: &mut CPU) -> u16 {
         cpu.reg_pc += 1;
-        unsafe { trace_memory(cpu.reg_pc) };
         cpu.reg_pc
     }
 
     // Addressing Mode: Zero Page
     fn zp0(cpu: &mut CPU) -> u16 {
         cpu.reg_pc += 1;
-        
         let address = cpu.mem_read(cpu.reg_pc) as u16;
-        unsafe { trace_memory(address) };
         address
     }		
 
     // Addressing Mode: Zero Page, X
     fn zpx(cpu: &mut CPU) -> u16 {
         cpu.reg_pc += 1;
-        
         let pos = cpu.mem_read(cpu.reg_pc);
         let address = pos.wrapping_add(cpu.reg_x) as u16;
-        unsafe { trace_memory(address) };
         address
     }
 
     // Addressing Mode: Zero Page, Y
     fn zpy(cpu: &mut CPU) -> u16 {
         cpu.reg_pc += 1;
-        
         let pos = cpu.mem_read(cpu.reg_pc);
         let address = pos.wrapping_add(cpu.reg_y) as u16;
-        unsafe { trace_memory(address) };
         address
     }
 
     // Addressing Mode: Relative
     fn rel(cpu: &mut CPU) -> u16 { 
         cpu.reg_pc += 1;
-        unsafe { trace_memory(cpu.reg_pc as u16) };
         cpu.reg_pc
     }
 
@@ -349,68 +340,56 @@ impl InstructionSet {
     // Program counter increment, skipping over the extra byte needed for the opcode instruction
     fn abs(cpu: &mut CPU) -> u16 {
         cpu.reg_pc += 1;
-
         let address = cpu.mem_read_u16(cpu.reg_pc);
         cpu.reg_pc += 1;
-        unsafe { trace_memory(address) };
         address
     }
 
     // Addressing Mode: Absolute, X
     fn abx(cpu: &mut CPU) -> u16 {
         cpu.reg_pc += 1;
-
         let base = cpu.mem_read_u16(cpu.reg_pc);
         let address = base.wrapping_add(cpu.reg_x as u16);
         cpu.reg_pc += 1;
-        unsafe { trace_memory(address) };
         address
     }
 
     // Addressing Mode: Absolute, Y
     fn aby(cpu: &mut CPU) -> u16 {
         cpu.reg_pc += 1;
-
         let base = cpu.mem_read_u16(cpu.reg_pc);
         let address = base.wrapping_add(cpu.reg_y as u16);
         cpu.reg_pc += 1;
-        unsafe { trace_memory(address) };
         address
     }	
 
     // Addressing Mode: Indirect
     fn ind(cpu: &mut CPU) -> u16 {
         cpu.reg_pc += 1;
-
         let address = cpu.mem_read_u16(cpu.reg_pc);
         cpu.reg_pc += 1;
-        unsafe { trace_memory(address) };
         address
     }
 
     // Addressing Mode: Indirect Indexed X
     fn izx(cpu: &mut CPU) -> u16 {
         cpu.reg_pc += 1;
-
         let base = cpu.mem_read(cpu.reg_pc);
         let ptr = base.wrapping_add(cpu.reg_x);
         let lo = cpu.mem_read(ptr as u16);
         let hi = cpu.mem_read(ptr.wrapping_add(1) as u16);
         let address = (hi as u16) << 8 | (lo as u16);
-        unsafe { trace_memory(address) };
         address
     }
 
     // Addressing Mode: Indirect Indexed Y
     fn izy(cpu: &mut CPU) -> u16 {
         cpu.reg_pc += 1;
-
         let base = cpu.mem_read(cpu.reg_pc);
         let lo = cpu.mem_read(base as u16);
         let hi = cpu.mem_read((base as u8).wrapping_add(1) as u16);
         let deref_base = (hi as u16) << 8 | (lo as u16);
         let deref = deref_base.wrapping_add(cpu.reg_y as u16);
-        unsafe { trace_memory(deref) };
         deref
     }
 
