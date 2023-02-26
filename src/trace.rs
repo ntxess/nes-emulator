@@ -19,16 +19,14 @@ pub fn trace(cpu: &CPU) -> String {
             _ => String::from(""),
         },
         2 => {
+            let address = cpu.mem_read(begin + 1);
             match ops.mode {
                 AddressingMode::Immediate => {
-                    let address = cpu.mem_read(begin + 1);
-
                     hex_dump.push(address);
                     format!("#${:02x}", address)
                 }
 
                 AddressingMode::ZeroPage => {
-                    let address = cpu.mem_read(begin + 1);
                     let stored_value = cpu.mem_read(address as u16);
 
                     hex_dump.push(address);
@@ -36,7 +34,6 @@ pub fn trace(cpu: &CPU) -> String {
                 }
                 
                 AddressingMode::ZeroPage_X => {
-                    let address = cpu.mem_read(begin + 1);
                     let mem_addr = address.wrapping_add(cpu.reg_x) as u16;
                     let stored_value = cpu.mem_read(mem_addr as u16);
 
@@ -45,7 +42,6 @@ pub fn trace(cpu: &CPU) -> String {
                 }
                 
                 AddressingMode::ZeroPage_Y => {
-                    let address = cpu.mem_read(begin + 1);
                     let mem_addr = address.wrapping_add(cpu.reg_y) as u16;
                     let stored_value = cpu.mem_read(mem_addr as u16);
 
@@ -54,7 +50,6 @@ pub fn trace(cpu: &CPU) -> String {
                 }
                 
                 AddressingMode::Indirect_X => {
-                    let address = cpu.mem_read(begin + 1);
                     let addr_offset = address.wrapping_add(cpu.reg_x);
                     let lo = cpu.mem_read(addr_offset as u16);
                     let hi = cpu.mem_read(addr_offset.wrapping_add(1) as u16);
@@ -67,7 +62,6 @@ pub fn trace(cpu: &CPU) -> String {
                 }
 
                 AddressingMode::Indirect_Y => {
-                    let address = cpu.mem_read(begin + 1);
                     let lo = cpu.mem_read(address as u16);
                     let hi = cpu.mem_read((address as u8).wrapping_add(1) as u16);
                     let addr_offset = (hi as u16) << 8 | (lo as u16);
@@ -79,9 +73,8 @@ pub fn trace(cpu: &CPU) -> String {
                         "(${:02x}),Y = {:04x} @ {:04x} = {:02x}",
                         address, addr_offset, mem_addr, stored_value) 
                 }
+
                 AddressingMode::NoneAddressing => {
-                    // assuming local jumps: BNE, BVS, etc....
-                    let address: u8 = cpu.mem_read(begin + 1);
                     hex_dump.push(address);
 
                     let jmp_address: usize =
@@ -100,10 +93,10 @@ pub fn trace(cpu: &CPU) -> String {
             let address_hi = cpu.mem_read(begin + 2);
             hex_dump.push(address_lo);
             hex_dump.push(address_hi);
+            let address = cpu.mem_read_u16(begin + 1);
 
             match ops.mode {
                 AddressingMode::NoneAddressing => {
-                    let address = cpu.mem_read_u16(begin + 1);
                     if code == 0x6c {
                         //jmp indirect
                         let jmp_addr = if address & 0x00FF == 0x00FF {
@@ -119,15 +112,14 @@ pub fn trace(cpu: &CPU) -> String {
                         format!("${:04x}", address)
                     }
                 }
+
                 AddressingMode::Absolute => {
-                    let address = cpu.mem_read_u16(begin + 1);
                     let stored_value: u8 = cpu.mem_read(address);
 
                     format!("${:04x} = {:02x}", address, stored_value)
                 }
 
                 AddressingMode::Absolute_X => {
-                    let address = cpu.mem_read_u16(begin + 1);
                     let mem_addr = address.wrapping_add(cpu.reg_x as u16);
                     let stored_value = cpu.mem_read(mem_addr);
                     
@@ -135,7 +127,6 @@ pub fn trace(cpu: &CPU) -> String {
                 }
 
                 AddressingMode::Absolute_Y => {
-                    let address = cpu.mem_read_u16(begin + 1);
                     let mem_addr = address.wrapping_add(cpu.reg_y as u16);
                     let stored_value = cpu.mem_read(mem_addr);
 
@@ -156,6 +147,7 @@ pub fn trace(cpu: &CPU) -> String {
         .map(|z| format!("{:02x}", z))
         .collect::<Vec<String>>()
         .join(" ");
+    
     let asm_str = format!("{:04x}  {:8} {: >4} {}", begin, hex_str, ops.mnemonic, tmp)
         .trim()
         .to_string();

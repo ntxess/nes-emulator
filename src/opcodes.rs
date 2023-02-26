@@ -16,8 +16,7 @@ impl InstructionSet {
             // Massive Instruction Set Matrix from OneLoneCoder's own emulator repo, Thank you!
             // Copyright 2018, 2019, 2020, 2021 OneLoneCoder.com
             // OLC's Original matrix does not support the unofficial opcodes 
-            // This matrix was modified with additions of the unofficial opcodes + address fixes
-            // Additional fix from original: Brk opcode changed from imm to imp per the NES engineering guide.
+            // This matrix was modified with additions of the unofficial opcodes + address mode fixes
             matrix: vec![
                 Instruction{opcode: Box::new(InstructionSet::brk), addrmode: Box::new(InstructionSet::imp), cycle: 7},
                 Instruction{opcode: Box::new(InstructionSet::ora), addrmode: Box::new(InstructionSet::izx), cycle: 6},
