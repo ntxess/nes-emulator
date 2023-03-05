@@ -20,17 +20,6 @@ pub struct OpCodes {
     pub cycles: u8,
 }
 
-impl OpCodes {
-    fn new(mnemonic: &'static str, len: u8, mode: AddressingMode, cycles: u8) -> Self {
-        OpCodes {
-            mnemonic: mnemonic,
-            len: len,
-            mode: mode,
-            cycles: cycles,
-        }
-    }
-}
-
 lazy_static! {
     pub static ref DEBUG_OPCODES: Vec<OpCodes> = vec![
         OpCodes{mnemonic: "brk", len: 1, mode: AddressingMode::NoneAddressing, cycles: 7},

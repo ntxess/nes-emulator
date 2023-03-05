@@ -4,6 +4,7 @@ pub mod bus;
 pub mod cartridge;
 pub mod trace;
 pub mod debugcodes;
+pub mod ppu;
 
 use cpu::CPU;
 use cpu::Mem;
