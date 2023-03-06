@@ -3,7 +3,7 @@ use crate::cpu::CPU;
 use crate::debugcodes;
 use crate::debugcodes::AddressingMode;
 
-pub fn trace(cpu: &CPU) -> String {
+pub fn trace(cpu: &mut CPU) -> String {
     let ref opscodes: Vec<debugcodes::OpCodes> = *debugcodes::DEBUG_OPCODES;
 
     let code = cpu.mem_read(cpu.reg_pc);

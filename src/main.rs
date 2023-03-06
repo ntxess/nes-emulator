@@ -10,8 +10,8 @@ use cpu::CPU;
 use cpu::Mem;
 use bus::Bus;
 use cartridge::Rom;
-use rand::Rng;
 use trace::trace;
+//use rand::Rng;
 
 use sdl2::event::Event;
 use sdl2::EventPump;
@@ -41,7 +41,7 @@ fn color(byte: u8) -> Color {
     }
 }
 
-fn read_screen_state(cpu: &CPU, frame: &mut [u8; 32 * 3 * 32]) -> bool {
+fn read_screen_state(cpu: &mut CPU, frame: &mut [u8; 32 * 3 * 32]) -> bool {
     let mut frame_idx = 0;
     let mut update = false;
     for i in 0x0200..0x600 {
@@ -122,8 +122,8 @@ fn main() {
     let mut cpu = CPU::new(bus);
     cpu.reset();
     cpu.reg_pc = 0xC000;
-    let mut screen_state = [0 as u8; 32 * 3 * 32];
-    let mut rng = rand::thread_rng();
+    // let mut screen_state = [0 as u8; 32 * 3 * 32];
+    // let mut rng = rand::thread_rng();
 
     // run the game cycle
     cpu.run_with_callback(move |cpu| {
